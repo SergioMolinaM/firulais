@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Manrope', sans-serif;
+  background: #f6f8f6;
+  overflow: hidden;
+  height: 100dvh;
+}
+.dark body { background: #0d1b10; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.ms {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+.ms.filled { font-variation-settings: 'FILL' 1; }
+
+.slide-up { animation: slideUp .3s ease-out; }
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.fade-in { animation: fadeIn .25s ease-out; }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.dot-walk {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #13ec37;
+  animation: dotB 1s ease-in-out infinite;
+}
+.dot-walk:nth-child(2) { animation-delay: .15s; }
+.dot-walk:nth-child(3) { animation-delay: .3s; }
+@keyframes dotB {
+  0%,80%,100% { transform: scale(.6); opacity: .4; }
+  40%          { transform: scale(1);  opacity: 1; }
+}
+
+.modal-bg { background: rgba(0,0,0,.6); backdrop-filter: blur(4px); }
+.card { background: white; border-radius: 16px; }
+.dark .card { background: #1a2e1d; }
+
+.chat-u {
+  background: #13ec37;
+  color: #0d1b10;
+  border-radius: 18px 18px 4px 18px;
+}
+.chat-b {
+  background: white;
+  color: #0d1b10;
+  border-radius: 18px 18px 18px 4px;
+  border: 1px solid #e5e7eb;
+}
+.dark .chat-b { background: #1a2e1d; color: #f0f4f0; border-color: #2a3d2d; }
+
+.onboarding-bg {
+  background: linear-gradient(160deg, #0d1b10 0%, #1a3820 50%, #0d2b15 100%);
+}
+
+.badge-sponsored {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+input, textarea { outline: none; }
+
+@layer components {
+  .input-base {
+    @apply w-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-border-dark rounded-2xl px-4 py-3.5 text-gray-900 dark:text-white font-semibold text-base shadow-sm focus:border-primary transition-colors;
+  }
+}
