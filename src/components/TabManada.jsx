@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { Icon, Avatar } from './ui'
 
-export default function TabManada({ user, convs, setConvs, target, setTarget }) {
+export default function TabManada({ convs, setConvs, target, setTarget }) {
   const [active, setActive] = useState(target || null)
   const [draft, setDraft] = useState('')
   const bottomRef = useRef(null)
 
   useEffect(() => {
-    if (target) setActive(target)
+    setActive(target)
   }, [target])
 
   useEffect(() => {

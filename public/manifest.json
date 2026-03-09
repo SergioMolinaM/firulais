@@ -1,0 +1,18 @@
+{
+  "name": "Firulais",
+  "short_name": "Firulais",
+  "description": "Tu barrio más limpio. Tu perro, más feliz.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1b10",
+  "theme_color": "#13ec37",
+  "icons": [
+    {
+      "src": "/paw.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

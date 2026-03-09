@@ -12,9 +12,6 @@ export function Avatar({ src, size = 10, ring = false }) {
   )
 }
 
-export function Badge({ children, color = 'bg-primary/10 text-primary-dark' }) {
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${color}`}>{children}</span>
-}
 
 export function Stars({ n }) {
   return (

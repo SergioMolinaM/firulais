@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { Icon, Stars } from './ui'
 import { MOCK_MARKET } from '../data/mockData'
+import { useApp } from '../context/AppContext'
 
-export default function TabTienda({ user }) {
+export default function TabTienda() {
+  const { user } = useApp()
   const [cat, setCat] = useState('Todos')
   const [selected, setSelected] = useState(null)
 
   const items = cat === 'Todos' ? MOCK_MARKET.items : MOCK_MARKET.items.filter(i => i.cat === cat)
 
   function callBusiness(phone) {
-    window.open(`tel:${phone}`, '_self')
+    window.location.href = `tel:${phone}`
   }
   function whatsappBusiness(phone, name) {
     const msg = encodeURIComponent(`Hola, vi tu negocio en Firulais y me interesa más información sobre ${name}.`)
@@ -120,8 +122,14 @@ export default function TabTienda({ user }) {
         <div className="bg-primary/10 border border-primary/20 rounded-2xl p-5 mt-2">
           <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">¿Tienes un negocio pet-friendly?</p>
           <p className="text-xs text-text-sec font-medium mb-3">Llega a miles de dueños de mascotas en Santiago. Planes desde $29.990/mes.</p>
-          <button className="bg-primary text-gray-900 font-extrabold py-2.5 px-5 rounded-xl text-sm active:scale-95 transition-transform">
-            Anunciar mi negocio →
+          <button
+            onClick={() => {
+              const msg = encodeURIComponent('Hola, quiero anunciar mi negocio pet-friendly en Firulais. ¿Me pueden dar más información?')
+              window.open(`https://wa.me/56912345678?text=${msg}`, '_blank')
+            }}
+            className="bg-primary text-gray-900 font-extrabold py-2.5 px-5 rounded-xl text-sm active:scale-95 transition-transform flex items-center gap-2"
+          >
+            <Icon name="chat" filled className="text-lg" /> Anunciar mi negocio →
           </button>
         </div>
       </div>

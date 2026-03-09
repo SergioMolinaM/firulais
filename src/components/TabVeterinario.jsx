@@ -2,11 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import { Icon } from './ui'
 import { MOCK_VET_ENTRIES, ETOLOGY_TIPS } from '../data/mockData'
 import { askGemini } from '../lib/gemini'
+import { useApp } from '../context/AppContext'
 
-export default function TabVeterinario({ pet }) {
+export default function TabVeterinario() {
+  const { pet } = useApp()
   const [sub, setSub] = useState('chat')
 
-  const TABS = [
+  const SUB_TABS = [
     { key: 'chat', icon: 'smart_toy', label: 'VetBot' },
     { key: 'diary', icon: 'book_2', label: 'Diario' },
     { key: 'etology', icon: 'pets', label: 'Guía' },
@@ -17,7 +19,7 @@ export default function TabVeterinario({ pet }) {
       <div className="px-5 pt-10 pb-3 flex-shrink-0">
         <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-4">Veterinario</h1>
         <div className="flex gap-2">
-          {TABS.map(t => (
+          {SUB_TABS.map(t => (
             <button
               key={t.key}
               onClick={() => setSub(t.key)}
@@ -43,8 +45,6 @@ function VetBot({ pet }) {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [hasKey, setHasKey] = useState(!!localStorage.getItem('firulais_gemini_key'))
-  const [keyDraft, setKeyDraft] = useState('')
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -65,39 +65,6 @@ function VetBot({ pet }) {
     setMsgs(m => [...m, { role: 'model', text: reply || 'Lo siento, ocurrió un error. Intenta de nuevo.' }])
     setLoading(false)
   }
-
-  function saveKey() {
-    if (!keyDraft.trim()) return
-    localStorage.setItem('firulais_gemini_key', keyDraft.trim())
-    setHasKey(true)
-  }
-
-  if (!hasKey) return (
-    <div className="flex flex-col h-full px-5 pt-4 pb-8 items-center justify-center gap-5">
-      <div className="w-16 h-16 bg-primary/15 rounded-2xl flex items-center justify-center">
-        <Icon name="smart_toy" filled className="text-primary text-3xl" />
-      </div>
-      <div className="text-center">
-        <p className="font-extrabold text-base text-gray-900 dark:text-white mb-1">Activa VetBot IA</p>
-        <p className="text-xs text-text-sec font-medium leading-relaxed">Ingresa tu API Key de Google Gemini para activar el asistente veterinario. Es gratis en la capa básica.</p>
-      </div>
-      <div className="w-full space-y-3">
-        <input
-          className="input-base"
-          placeholder="AIza..."
-          type="password"
-          value={keyDraft}
-          onChange={e => setKeyDraft(e.target.value)}
-        />
-        <button onClick={saveKey} className="w-full bg-primary text-gray-900 font-extrabold py-3.5 rounded-2xl text-sm active:scale-95 transition-transform">
-          Activar VetBot
-        </button>
-        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="block text-center text-xs font-semibold text-primary">
-          Obtener API Key gratis →
-        </a>
-      </div>
-    </div>
-  )
 
   return (
     <div className="flex flex-col h-full">

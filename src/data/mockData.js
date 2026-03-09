@@ -1,3 +1,10 @@
+export const WALK_HISTORY = [
+  { id: 'w1', date: '24 feb 2026', duration: '28 min', distance: '2.1 km', waste: 2, points: 40, shared: false },
+  { id: 'w2', date: '22 feb 2026', duration: '35 min', distance: '2.8 km', waste: 1, points: 30, shared: true },
+  { id: 'w3', date: '21 feb 2026', duration: '20 min', distance: '1.4 km', waste: 0, points: 10, shared: false },
+  { id: 'w4', date: '18 feb 2026', duration: '42 min', distance: '3.2 km', waste: 3, points: 60, shared: true },
+]
+
 export const MOCK_FEED = [
   { id: 1, user: 'Catalina_Provi', avatar: 'https://i.pravatar.cc/80?u=cata', img: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=600', caption: 'Mañana perfecta en Parque Bicentenario 🐾☀️ Da gusto ver el pasto limpio.', loc: 'Vitacura', time: 'hace 10 min', likes: 245, liked: false },
   { id: 2, user: 'Seba_Paseos', avatar: 'https://i.pravatar.cc/80?u=seba', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600', caption: '¡Récord semanal con Max! 12km este mes 💪 Igual recordad las bolsitas!', loc: 'Providencia', time: 'hace 1h', likes: 189, liked: false },
@@ -11,10 +18,10 @@ export const MOCK_LOST = [
 ]
 
 export const MOCK_ADOPTION = [
-  { id: 'a1', name: 'Pelusa', breed: 'Mestizo', age: '4 meses', sex: 'Hembra', desc: 'Cachorrita juguetona y cariñosa. Tiene vacunas y chip. Busca familia con jardín.', img: 'https://images.unsplash.com/photo-1561037404-61cd46aa615b?w=400', org: 'Rescate Ñuñoa', status: 'disponible' },
-  { id: 'a2', name: 'Bruno', breed: 'Labrador', age: '2 años', sex: 'Macho', desc: 'Perro tranquilo y entrenado. Convive con niños y gatos. Esterilizado.', img: 'https://images.unsplash.com/photo-1582456891925-a53280e17499?w=400', org: 'SOS Animal Chile', status: 'disponible' },
-  { id: 'a3', name: 'Nala', breed: 'Pitbull Mestizo', age: '1 año', sex: 'Hembra', desc: 'Cariñosa y enérgica. Necesita dueño con experiencia. Totalmente vacunada.', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400', org: 'Patitas Felices', status: 'reservado' },
-  { id: 'a4', name: 'Rex', breed: 'Pastor Alemán', age: '5 años', sex: 'Macho', desc: 'Perro senior ideal para hogar tranquilo. Muy obediente y leal.', img: 'https://images.unsplash.com/photo-1589941013453-ec89f33b5e95?w=400', org: 'Rescate Santiago', status: 'disponible' },
+  { id: 'a1', name: 'Pelusa', breed: 'Mestizo', age: '4 meses', sex: 'Hembra', desc: 'Cachorrita juguetona y cariñosa. Tiene vacunas y chip. Busca familia con jardín.', img: 'https://images.unsplash.com/photo-1561037404-61cd46aa615b?w=400', org: 'Rescate Ñuñoa', status: 'disponible', phone: '+56988776655' },
+  { id: 'a2', name: 'Bruno', breed: 'Labrador', age: '2 años', sex: 'Macho', desc: 'Perro tranquilo y entrenado. Convive con niños y gatos. Esterilizado.', img: 'https://images.unsplash.com/photo-1582456891925-a53280e17499?w=400', org: 'SOS Animal Chile', status: 'disponible', phone: '+56977665544' },
+  { id: 'a3', name: 'Nala', breed: 'Pitbull Mestizo', age: '1 año', sex: 'Hembra', desc: 'Cariñosa y enérgica. Necesita dueño con experiencia. Totalmente vacunada.', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400', org: 'Patitas Felices', status: 'reservado', phone: '+56966554433' },
+  { id: 'a4', name: 'Rex', breed: 'Pastor Alemán', age: '5 años', sex: 'Macho', desc: 'Perro senior ideal para hogar tranquilo. Muy obediente y leal.', img: 'https://images.unsplash.com/photo-1589941013453-ec89f33b5e95?w=400', org: 'Rescate Santiago', status: 'disponible', phone: '+56955443322' },
 ]
 
 export const MOCK_RANKING = [

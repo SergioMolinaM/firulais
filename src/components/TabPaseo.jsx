@@ -1,21 +1,29 @@
 import { useState, useEffect, useRef } from 'react'
+import { collection, addDoc, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore'
 import { Icon } from './ui'
+import WalkMap from './WalkMap'
+import { useApp } from '../context/AppContext'
+import { db } from '../lib/firebase'
 
-const WALK_HISTORY = [
-  { id: 'w1', date: '24 feb 2026', duration: '28 min', distance: '2.1 km', waste: 2, points: 40, shared: false },
-  { id: 'w2', date: '22 feb 2026', duration: '35 min', distance: '2.8 km', waste: 1, points: 30, shared: true },
-  { id: 'w3', date: '21 feb 2026', duration: '20 min', distance: '1.4 km', waste: 0, points: 10, shared: false },
-  { id: 'w4', date: '18 feb 2026', duration: '42 min', distance: '3.2 km', waste: 3, points: 60, shared: true },
-]
-
-export default function TabPaseo({ user, pet, onAddPoints, onShareWalk }) {
-  const [walking, setWalking] = useState(false)
-  const [seconds, setSeconds] = useState(0)
-  const [wasteCount, setWasteCount] = useState(0)
-  const [view, setView] = useState('home') // 'home' | 'active' | 'summary' | 'history'
-  const [lastWalk, setLastWalk] = useState(null)
-  const [history, setHistory] = useState(WALK_HISTORY)
+export default function TabPaseo({ onShareWalk }) {
+  const { pet, uid, addPoints: onAddPoints } = useApp()
+  const [walking,      setWalking]      = useState(false)
+  const [seconds,      setSeconds]      = useState(0)
+  const [wasteCount,   setWasteCount]   = useState(0)
+  const [realDistance, setRealDistance] = useState(0) // metros, de GPS
+  const [view,         setView]         = useState('home') // 'home' | 'active' | 'summary' | 'history'
+  const [lastWalk,     setLastWalk]     = useState(null)
+  const [history,      setHistory]      = useState([])
   const interval = useRef(null)
+
+  // Load walk history from Firestore when uid is available
+  useEffect(() => {
+    if (!uid) return
+    const q = query(collection(db, 'users', uid, 'walks'), orderBy('createdAt', 'desc'))
+    getDocs(q)
+      .then(snap => setHistory(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .catch(() => { /* offline — keep empty */ })
+  }, [uid])
 
   useEffect(() => {
     if (walking) {
@@ -29,6 +37,7 @@ export default function TabPaseo({ user, pet, onAddPoints, onShareWalk }) {
   function startWalk() {
     setSeconds(0)
     setWasteCount(0)
+    setRealDistance(0)
     setWalking(true)
     setView('active')
   }
@@ -40,7 +49,10 @@ export default function TabPaseo({ user, pet, onAddPoints, onShareWalk }) {
   function endWalk() {
     setWalking(false)
     const pts = 10 + wasteCount * 10
-    const dist = ((seconds / 60) * 0.065).toFixed(1)
+    // Usar distancia GPS real si está disponible, si no, estimación por tiempo
+    const dist = realDistance > 0
+      ? (realDistance / 1000).toFixed(1)
+      : ((seconds / 60) * 0.065).toFixed(1)
     const walk = {
       id: `w${Date.now()}`,
       date: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }),
@@ -53,12 +65,10 @@ export default function TabPaseo({ user, pet, onAddPoints, onShareWalk }) {
     setLastWalk(walk)
     setHistory(h => [walk, ...h])
     onAddPoints(pts)
+    if (uid) {
+      addDoc(collection(db, 'users', uid, 'walks'), { ...walk, createdAt: serverTimestamp() }).catch(() => {})
+    }
     setView('summary')
-  }
-
-  function openGoogleMaps() {
-    const q = encodeURIComponent('parques para perros Santiago')
-    window.open(`https://maps.google.com/?q=${q}`, '_blank')
   }
 
   function shareWalk() {
@@ -69,58 +79,66 @@ export default function TabPaseo({ user, pet, onAddPoints, onShareWalk }) {
   }
 
   const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+  const displayKm = realDistance > 0
+    ? (realDistance / 1000).toFixed(2)
+    : ((seconds / 60) * 0.065).toFixed(1)
 
   if (view === 'active') return (
-    <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark px-6 pt-10 pb-8 slide-up">
-      <div className="flex items-center justify-between mb-8">
+    <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark slide-up">
+
+      {/* Header compacto */}
+      <div className="px-5 pt-10 pb-3 flex items-center justify-between flex-shrink-0">
         <div>
           <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest">Paseo activo</p>
-          <p className="text-lg font-extrabold text-gray-900 dark:text-white mt-0.5">{pet?.name || 'tu perro'}</p>
+          <p className="text-base font-extrabold text-gray-900 dark:text-white mt-0.5">{pet?.name || 'tu perro'}</p>
         </div>
-        <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center animate-pulse">
-          <span className="w-3 h-3 bg-primary rounded-full block" />
+        <div className="flex items-center gap-3">
+          <span className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white tabular-nums">
+            {fmt(seconds)}
+          </span>
+          <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center animate-pulse">
+            <span className="w-2.5 h-2.5 bg-primary rounded-full block" />
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-6">
-        <div className="text-7xl font-extrabold tracking-tight text-gray-900 dark:text-white tabular-nums">
-          {fmt(seconds)}
-        </div>
-        <div className="flex gap-8 text-center">
-          <div>
-            <p className="text-2xl font-extrabold text-primary">{wasteCount}</p>
-            <p className="text-xs text-text-sec font-semibold mt-0.5">desechos</p>
-          </div>
-          <div>
-            <p className="text-2xl font-extrabold text-primary">+{10 + wasteCount * 10}</p>
-            <p className="text-xs text-text-sec font-semibold mt-0.5">puntos</p>
-          </div>
-          <div>
-            <p className="text-2xl font-extrabold text-primary">{((seconds / 60) * 0.065).toFixed(1)}</p>
-            <p className="text-xs text-text-sec font-semibold mt-0.5">km</p>
-          </div>
-        </div>
+      {/* Mapa */}
+      <div className="flex-1 mx-4 rounded-2xl overflow-hidden shadow-lg min-h-0 relative">
+        <WalkMap walking={walking} onDistanceUpdate={setRealDistance} />
 
+        {/* FAB: Registrar desecho */}
         <button
           onClick={registerWaste}
-          className="w-36 h-36 rounded-full bg-primary/10 border-4 border-primary flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform shadow-xl shadow-primary/20"
+          className="absolute bottom-4 right-4 z-[1000] w-16 h-16 rounded-full bg-primary border-2 border-white shadow-xl flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
         >
-          <span className="text-3xl">🗑️</span>
-          <span className="text-xs font-extrabold text-primary uppercase tracking-wider">Registrar</span>
-          <span className="text-xs text-text-sec">desecho</span>
-        </button>
-
-        <button onClick={openGoogleMaps} className="flex items-center gap-2 text-sm font-semibold text-text-sec py-2">
-          <Icon name="map" className="text-base" /> Ver mapa en Google Maps
+          <span className="text-xl">🗑️</span>
+          {wasteCount > 0 && (
+            <span className="text-xs font-extrabold text-gray-900 leading-none">{wasteCount}</span>
+          )}
         </button>
       </div>
 
-      <button
-        onClick={endWalk}
-        className="w-full bg-red-500 text-white font-extrabold py-4 rounded-2xl text-base shadow-lg active:scale-95 transition-transform"
-      >
-        Terminar paseo
-      </button>
+      {/* Stats + botón terminar */}
+      <div className="px-5 pt-3 pb-6 flex-shrink-0 space-y-3">
+        <div className="flex gap-3">
+          {[
+            { icon: 'delete', label: 'Desechos', val: wasteCount },
+            { icon: 'emoji_events', label: 'Puntos',   val: `+${10 + wasteCount * 10}` },
+            { icon: 'route',  label: 'Distancia', val: `${displayKm} km` },
+          ].map(({ icon, label, val }) => (
+            <div key={label} className="flex-1 bg-white dark:bg-surface-dark rounded-2xl py-3 text-center shadow-sm">
+              <p className="text-base font-extrabold text-primary">{val}</p>
+              <p className="text-[10px] text-text-sec font-semibold mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={endWalk}
+          className="w-full bg-red-500 text-white font-extrabold py-4 rounded-2xl text-base shadow-lg active:scale-95 transition-transform"
+        >
+          Terminar paseo
+        </button>
+      </div>
     </div>
   )
 

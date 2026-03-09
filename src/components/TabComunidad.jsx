@@ -1,25 +1,60 @@
-import { useState } from 'react'
-import { Icon, Avatar, Badge } from './ui'
-import { MOCK_FEED, MOCK_LOST, MOCK_ADOPTION, MOCK_RANKING } from '../data/mockData'
+import { useState, useEffect } from 'react'
+import { collection, query, orderBy, limit, onSnapshot, addDoc, updateDoc, doc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore'
+import { Icon, Avatar } from './ui'
+import { MOCK_LOST, MOCK_ADOPTION, MOCK_RANKING } from '../data/mockData'
+import { useApp } from '../context/AppContext'
+import { db } from '../lib/firebase'
 
-export default function TabComunidad({ user, pet, onMessage, sharedWalk, onClearShared }) {
+export default function TabComunidad({ onMessage, sharedWalk, onClearShared }) {
+  const { user, pet, uid } = useApp()
   const [sub, setSub] = useState('feed')
-  const [feed, setFeed] = useState(sharedWalk
-    ? [{ id: Date.now(), user: user?.name || 'Tú', avatar: user?.photoUrl, img: null, caption: `¡Acabo de terminar un paseo con ${pet?.name}! 🐾 ${sharedWalk.duration} · ${sharedWalk.distance} · ${sharedWalk.waste} desechos recogidos.`, loc: 'Mi barrio', time: 'ahora', likes: 0, liked: false }, ...MOCK_FEED]
-    : MOCK_FEED
-  )
+  const [feed, setFeed] = useState([])
   const [lostFilter, setLostFilter] = useState('todos')
   const [selectedLost, setSelectedLost] = useState(null)
 
-  function toggleLike(id) {
-    setFeed(f => f.map(p => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p))
+  // Feed en tiempo real desde Firestore
+  useEffect(() => {
+    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50))
+    const unsub = onSnapshot(q, snap => {
+      setFeed(snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+        liked: (d.data().likedBy || []).includes(uid),
+      })))
+    }, () => {})
+    return unsub
+  }, [uid])
+
+  // Compartir paseo como post
+  useEffect(() => {
+    if (!sharedWalk || !uid) return
+    addDoc(collection(db, 'posts'), {
+      authorUid: uid,
+      user:      user?.name || 'Tú',
+      avatar:    user?.photoUrl || null,
+      img:       null,
+      caption:   `¡Acabo de terminar un paseo con ${pet?.name || 'mi mascota'}! 🐾 ${sharedWalk.duration} · ${sharedWalk.distance} · ${sharedWalk.waste} desechos recogidos.`,
+      loc:       'Mi barrio',
+      createdAt: serverTimestamp(),
+      likedBy:   [],
+    }).catch(() => {})
+    onClearShared()
+  }, [sharedWalk])
+
+  async function toggleLike(postId) {
+    if (!uid) return
+    const post = feed.find(p => p.id === postId)
+    if (!post) return
+    await updateDoc(doc(db, 'posts', postId), {
+      likedBy: post.liked ? arrayRemove(uid) : arrayUnion(uid),
+    }).catch(() => {})
   }
 
-  const TABS = [
-    { key: 'feed', icon: 'dynamic_feed', label: 'Feed' },
-    { key: 'sos', icon: 'search', label: 'SOS' },
-    { key: 'adopt', icon: 'favorite', label: 'Adóptame' },
-    { key: 'ranking', icon: 'emoji_events', label: 'Ranking' },
+  const SUB_TABS = [
+    { key: 'feed',    icon: 'dynamic_feed',  label: 'Feed'      },
+    { key: 'sos',     icon: 'search',         label: 'SOS'       },
+    { key: 'adopt',   icon: 'favorite',       label: 'Adóptame'  },
+    { key: 'ranking', icon: 'emoji_events',   label: 'Ranking'   },
   ]
 
   return (
@@ -27,7 +62,7 @@ export default function TabComunidad({ user, pet, onMessage, sharedWalk, onClear
       <div className="px-5 pt-10 pb-3 flex-shrink-0">
         <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-4">Comunidad</h1>
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {TABS.map(t => (
+          {SUB_TABS.map(t => (
             <button
               key={t.key}
               onClick={() => setSub(t.key)}
@@ -40,9 +75,9 @@ export default function TabComunidad({ user, pet, onMessage, sharedWalk, onClear
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
-        {sub === 'feed' && <FeedView feed={feed} onLike={toggleLike} onMessage={onMessage} />}
-        {sub === 'sos' && <SOSView filter={lostFilter} setFilter={setLostFilter} selected={selectedLost} setSelected={setSelectedLost} />}
-        {sub === 'adopt' && <AdoptView />}
+        {sub === 'feed'    && <FeedView feed={feed} onLike={toggleLike} onMessage={onMessage} />}
+        {sub === 'sos'     && <SOSView filter={lostFilter} setFilter={setLostFilter} selected={selectedLost} setSelected={setSelectedLost} />}
+        {sub === 'adopt'   && <AdoptView />}
         {sub === 'ranking' && <RankingView user={user} />}
       </div>
     </div>
@@ -50,34 +85,96 @@ export default function TabComunidad({ user, pet, onMessage, sharedWalk, onClear
 }
 
 function FeedView({ feed, onLike, onMessage }) {
+  const { user } = useApp()
+  const [openComment, setOpenComment] = useState(null)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [comments, setComments] = useState({})
+
+  function submitComment(postId) {
+    const text = commentDraft.trim()
+    if (!text) return
+    setComments(c => ({
+      ...c,
+      [postId]: [...(c[postId] || []), { id: Date.now(), author: user?.name || 'Tú', text }],
+    }))
+    setCommentDraft('')
+    setOpenComment(null)
+  }
+
+  if (feed.length === 0) return (
+    <div className="text-center pt-20 px-8">
+      <span className="text-5xl">🐾</span>
+      <p className="text-text-sec font-semibold text-sm mt-4">El feed está vacío</p>
+      <p className="text-text-sec text-xs mt-1">¡Sé el primero! Termina un paseo y compártelo en comunidad.</p>
+    </div>
+  )
+
   return (
     <div className="space-y-4 px-5">
-      {feed.map(post => (
-        <div key={post.id} className="bg-white dark:bg-surface-dark rounded-2xl shadow-sm overflow-hidden fade-in">
-          <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-            <Avatar src={post.avatar} size={9} ring />
-            <div className="flex-1 min-w-0">
-              <p className="font-extrabold text-sm text-gray-900 dark:text-white">{post.user}</p>
-              <p className="text-xs text-text-sec">{post.loc} · {post.time}</p>
-            </div>
-            <button onClick={() => onMessage(post.user)} className="px-3 py-1.5 rounded-full border border-primary/30 text-primary text-xs font-bold">
-              Mensaje
-            </button>
-          </div>
-          {post.img && <img src={post.img} className="w-full aspect-square object-cover" alt="" />}
-          <div className="px-4 py-3">
-            <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{post.caption}</p>
-            <div className="flex items-center gap-4 mt-3">
-              <button onClick={() => onLike(post.id)} className={`flex items-center gap-1.5 text-sm font-bold transition-colors ${post.liked ? 'text-red-500' : 'text-text-sec'}`}>
-                <Icon name={post.liked ? 'favorite' : 'favorite_border'} className="text-base" />{post.likes}
-              </button>
-              <button className="flex items-center gap-1.5 text-sm font-bold text-text-sec">
-                <Icon name="chat_bubble_outline" className="text-base" /> Comentar
+      {feed.map(post => {
+        const postComments = comments[post.id] || []
+        const likeCount = (post.likedBy || []).length
+        return (
+          <div key={post.id} className="bg-white dark:bg-surface-dark rounded-2xl shadow-sm overflow-hidden fade-in">
+            <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+              <Avatar src={post.avatar} size={9} ring />
+              <div className="flex-1 min-w-0">
+                <p className="font-extrabold text-sm text-gray-900 dark:text-white">{post.user}</p>
+                <p className="text-xs text-text-sec">{post.loc} · {post.createdAt?.toDate ? new Date(post.createdAt.toDate()).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }) : 'ahora'}</p>
+              </div>
+              <button onClick={() => onMessage(post.user)} className="px-3 py-1.5 rounded-full border border-primary/30 text-primary text-xs font-bold">
+                Mensaje
               </button>
             </div>
+            {post.img && <img src={post.img} className="w-full aspect-square object-cover" alt="" />}
+            <div className="px-4 py-3">
+              <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{post.caption}</p>
+              <div className="flex items-center gap-4 mt-3">
+                <button onClick={() => onLike(post.id)} className={`flex items-center gap-1.5 text-sm font-bold transition-colors ${post.liked ? 'text-red-500' : 'text-text-sec'}`}>
+                  <Icon name={post.liked ? 'favorite' : 'favorite_border'} className="text-base" />{likeCount}
+                </button>
+                <button
+                  onClick={() => setOpenComment(openComment === post.id ? null : post.id)}
+                  className="flex items-center gap-1.5 text-sm font-bold text-text-sec"
+                >
+                  <Icon name="chat_bubble_outline" className="text-base" />
+                  Comentar{postComments.length > 0 && ` (${postComments.length})`}
+                </button>
+              </div>
+
+              {postComments.length > 0 && (
+                <div className="mt-3 space-y-1.5 border-t border-gray-50 dark:border-border-dark pt-3">
+                  {postComments.map(c => (
+                    <p key={c.id} className="text-xs text-gray-700 dark:text-gray-300">
+                      <span className="font-extrabold">{c.author}: </span>{c.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {openComment === post.id && (
+                <div className="mt-3 flex gap-2">
+                  <input
+                    className="flex-1 input-base py-2 text-sm"
+                    placeholder="Escribe un comentario..."
+                    value={commentDraft}
+                    onChange={e => setCommentDraft(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && submitComment(post.id)}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => submitComment(post.id)}
+                    disabled={!commentDraft.trim()}
+                    className="w-9 h-9 bg-primary rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-40"
+                  >
+                    <Icon name="send" filled className="text-gray-900 text-base" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -168,8 +265,14 @@ function AdoptView() {
           <p className="text-sm text-text-sec font-medium mb-3">{selected.breed} · {selected.age} · {selected.sex}</p>
           <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4">{selected.desc}</p>
           <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-4">Organización: {selected.org}</p>
-          <button className="w-full bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-primary/20 active:scale-95 transition-transform">
-            Me interesa adoptarlo
+          <button
+            onClick={() => {
+              const msg = encodeURIComponent(`Hola, vi a ${selected.name} en Firulais y me interesa adoptarlo. ¿Me pueden dar más información?`)
+              window.open(`https://wa.me/${selected.phone}?text=${msg}`, '_blank')
+            }}
+            className="w-full bg-[#25D366] text-white font-extrabold py-4 rounded-2xl text-base shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2"
+          >
+            <Icon name="chat" filled className="text-xl" /> Contactar por WhatsApp
           </button>
         </div>
       </div>
@@ -178,7 +281,7 @@ function AdoptView() {
 
   return (
     <div className="px-5">
-      <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-4">Perros en adopción</p>
+      <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-4">Mascotas en adopción</p>
       <div className="grid grid-cols-2 gap-3">
         {MOCK_ADOPTION.map(dog => (
           <button key={dog.id} onClick={() => setSelected(dog)} className="bg-white dark:bg-surface-dark rounded-2xl shadow-sm overflow-hidden text-left">
@@ -206,13 +309,12 @@ function RankingView({ user }) {
       <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 mb-5 flex items-center gap-3">
         <span className="text-3xl">🏆</span>
         <div>
-          <p className="font-extrabold text-sm text-gray-900 dark:text-white">Ranking mensual · Feb 2026</p>
+          <p className="font-extrabold text-sm text-gray-900 dark:text-white">Ranking mensual · Mar 2026</p>
           <p className="text-xs text-text-sec font-medium">
             {myRank > 0 ? `Ocupas el puesto #${myRank}` : 'Pasea más para aparecer en el ranking'}
           </p>
         </div>
       </div>
-
       <div className="space-y-2">
         {MOCK_RANKING.map((r, i) => (
           <div key={r.user} className={`bg-white dark:bg-surface-dark rounded-2xl p-4 flex items-center gap-3 shadow-sm ${r.user === user?.name ? 'ring-2 ring-primary' : ''}`}>

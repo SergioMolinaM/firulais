@@ -8,7 +8,7 @@ html { height: 100%; }
 
 body {
   font-family: 'Manrope', sans-serif;
-  background: #f6f8f6;
+  background: theme('colors.bg-light');
   overflow: hidden;
   height: 100%;
 }
@@ -16,7 +16,7 @@ body {
 #root {
   height: 100%;
 }
-.dark body { background: #0d1b10; }
+.dark body { background: theme('colors.bg-dark'); }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -51,7 +51,7 @@ body {
 .dot-walk {
   width: 7px; height: 7px;
   border-radius: 50%;
-  background: #13ec37;
+  background: theme('colors.primary');
   animation: dotB 1s ease-in-out infinite;
 }
 .dot-walk:nth-child(2) { animation-delay: .15s; }
@@ -63,23 +63,27 @@ body {
 
 .modal-bg { background: rgba(0,0,0,.6); backdrop-filter: blur(4px); }
 .card { background: white; border-radius: 16px; }
-.dark .card { background: #1a2e1d; }
+.dark .card { background: theme('colors.surface-dark'); }
 
 .chat-u {
-  background: #13ec37;
-  color: #0d1b10;
+  background: theme('colors.primary');
+  color: theme('colors.bg-dark');
   border-radius: 18px 18px 4px 18px;
 }
 .chat-b {
   background: white;
-  color: #0d1b10;
+  color: theme('colors.bg-dark');
   border-radius: 18px 18px 18px 4px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid theme('colors.gray.200');
 }
-.dark .chat-b { background: #1a2e1d; color: #f0f4f0; border-color: #2a3d2d; }
+.dark .chat-b {
+  background: theme('colors.surface-dark');
+  color: #f0f4f0;
+  border-color: theme('colors.border-dark');
+}
 
 .onboarding-bg {
-  background: linear-gradient(160deg, #0d1b10 0%, #1a3820 50%, #0d2b15 100%);
+  background: linear-gradient(160deg, theme('colors.bg-dark') 0%, #1a3820 50%, #0d2b15 100%);
 }
 
 .badge-sponsored {
