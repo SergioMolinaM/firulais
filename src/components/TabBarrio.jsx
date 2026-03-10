@@ -27,6 +27,7 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
   const [newPostCat, setNewPostCat]     = useState('momento')
   const [newPostText, setNewPostText]   = useState('')
   const [posting, setPosting]           = useState(false)
+  const [postError, setPostError]       = useState('')
 
   // Feed en tiempo real desde Firestore — solo cuando auth está listo
   useEffect(() => {
@@ -62,9 +63,7 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
     const text = newPostText.trim()
     if (!text || !uid) return
     setPosting(true)
-    setNewPostText('')
-    setNewPostCat('momento')
-    setShowCompose(false)
+    setPostError('')
     try {
       await addDoc(collection(db, 'posts'), {
         authorUid: uid,
@@ -77,9 +76,13 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
         createdAt: Timestamp.fromDate(new Date()),
         likedBy:   [],
       })
+      // Solo cerrar el modal si la escritura fue exitosa
+      setNewPostText('')
+      setNewPostCat('momento')
+      setShowCompose(false)
     } catch (err) {
       console.error('Error publicando:', err)
-      alert('No se pudo publicar. Verifica tu conexión.')
+      setPostError('No se pudo publicar. Verifica tu conexión e inténtalo de nuevo.')
     } finally {
       setPosting(false)
     }
@@ -135,6 +138,12 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
               rows={4}
               placeholder="Comparte un dato útil, una recomendación, una alerta o una mejora para empezar…"
             />
+            {postError && (
+              <div className="mb-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl px-4 py-2.5 flex items-center gap-2">
+                <Icon name="error" filled className="text-red-500 text-base flex-shrink-0" />
+                <p className="text-xs text-red-700 dark:text-red-400 font-semibold">{postError}</p>
+              </div>
+            )}
             <button
               onClick={submitPost}
               disabled={!newPostText.trim() || posting}
@@ -172,17 +181,19 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
           </div>
         )}
 
-        {/* Tabs: flex-1 igual que Vet — 4 botones siempre visibles */}
-        <div className="flex gap-2">
-          {SUB_TABS.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setSub(t.key)}
-              className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-2xl text-[11px] font-extrabold transition-all ${sub === t.key ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
-            >
-              <Icon name={t.icon} className="text-sm" />{t.label}
-            </button>
-          ))}
+        {/* Tabs: scroll horizontal con chips de tamaño fijo */}
+        <div className="overflow-x-auto no-scrollbar">
+          <div className="flex gap-2 px-1" style={{ width: 'max-content' }}>
+            {SUB_TABS.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setSub(t.key)}
+                className={`flex items-center gap-1 px-4 py-2.5 rounded-2xl text-[11px] font-extrabold whitespace-nowrap transition-all ${sub === t.key ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
+              >
+                <Icon name={t.icon} className="text-sm" />{t.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
