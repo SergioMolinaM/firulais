@@ -1,4 +1,7 @@
 {
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "storage": {
     "bucket": "firulais-b479c.firebasestorage.app",
     "rules": "storage.rules"
