@@ -51,7 +51,7 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
       caption:   `¡Acabo de terminar un paseo con ${pet?.name || 'mi mascota'}! 🐾 ${sharedWalk.duration} · ${sharedWalk.distance} · ${sharedWalk.waste} desechos recogidos.`,
       category:  'momento',
       loc:       'Mi barrio',
-      createdAt: serverTimestamp(),
+      createdAt: Timestamp.fromDate(new Date()),
       likedBy:   [],
     }).catch(() => {})
     onClearShared()
@@ -81,7 +81,7 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
     setShowCompose(false)
     setPosting(false)
     try {
-      await addDoc(collection(db, 'posts'), { ...postData, createdAt: serverTimestamp() })
+      await addDoc(collection(db, 'posts'), postData)
     } catch { /* offline — optimistic post already visible */ }
   }
 
