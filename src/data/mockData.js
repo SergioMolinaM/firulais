@@ -47,7 +47,7 @@ export const MOCK_VET_ENTRIES = [
 
 export const MOCK_MARKET = {
   banner: { title: 'Consulta preventiva', subtitle: '30% dcto. para miembros Firulais', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=600', sponsor: 'Clínica VetLife' },
-  cats: ['Todos', 'Veterinarias', 'Alimentos', 'Accesorios', 'Peluquería', 'Seguros'],
+  cats: ['Todos', 'Veterinarias', 'Alimentos', 'Accesorios', 'Peluquería', 'Estadías', 'Paseadores', 'Seguros'],
   items: [
     { id: 'm1', cat: 'Veterinarias', name: 'VetLife Clínica', desc: 'Atención 24/7 · Urgencias · Cirugía', price: 'Desde $12.000', priceTag: 'Consulta', sponsored: true, rating: 4.9, reviews: 312, img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=300', badge: 'Patrocinado', phone: '+56 2 2345 6789' },
     { id: 'm2', cat: 'Veterinarias', name: 'PetSalud Las Condes', desc: 'Especialistas · Dermatología · Oncología', price: 'Desde $18.000', priceTag: 'Consulta', sponsored: false, rating: 4.7, reviews: 198, img: 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=300', phone: '+56 2 9876 5432' },
@@ -55,6 +55,8 @@ export const MOCK_MARKET = {
     { id: 'm4', cat: 'Accesorios', name: 'Collar GPS PetTrack Pro', desc: 'Rastreo en tiempo real · 3 días batería', price: '$89.990', priceTag: 'Unidad', sponsored: true, rating: 4.5, reviews: 88, img: 'https://images.unsplash.com/photo-1601758175246-ac43fb8b6aed?w=300', badge: 'Nuevo', phone: '+56 9 2233 4455' },
     { id: 'm5', cat: 'Peluquería', name: 'CanineSpa Providencia', desc: 'Baño + corte + perfume · A domicilio', price: 'Desde $25.000', priceTag: 'Sesión', sponsored: false, rating: 4.9, reviews: 156, img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=300', phone: '+56 9 1122 3344' },
     { id: 'm6', cat: 'Seguros', name: 'Seguro Mascota BICE', desc: 'Cobertura vet hasta $500.000/año', price: '$5.990/mes', priceTag: 'Plan básico', sponsored: true, rating: 4.4, reviews: 72, img: 'https://images.unsplash.com/photo-1628771065518-0d82f1938462?w=300', badge: 'Patrocinado', phone: '+56 2 600 222 3333' },
+    { id: 'm7', cat: 'Estadías', name: 'Hotel Patitas Felices', desc: 'Estadía con cuidado personalizado, paseos incluidos y reporte diario.', price: 'Desde $18.000/noche', priceTag: 'Por mascota', sponsored: false, rating: 4.8, reviews: 94, img: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=300', phone: '+56 9 3344 5566' },
+    { id: 'm8', cat: 'Paseadores', name: 'WalkDog Pro', desc: 'Paseadores certificados · GPS en tiempo real · Fotos del paseo', price: 'Desde $9.990/paseo', priceTag: '45 min', sponsored: false, rating: 4.7, reviews: 131, img: 'https://images.unsplash.com/photo-1534361960057-19889db9621e?w=300', phone: '+56 9 5566 7788' },
   ],
 }
 

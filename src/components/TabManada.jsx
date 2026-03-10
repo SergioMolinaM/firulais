@@ -5,6 +5,7 @@ export default function TabManada({ convs, setConvs, target, setTarget }) {
   const [active, setActive] = useState(target || null)
   const [draft, setDraft] = useState('')
   const bottomRef = useRef(null)
+  const [seenManada, setSeenManada] = useState(() => !!localStorage.getItem('seen_manada'))
 
   useEffect(() => {
     setActive(target)
@@ -89,20 +90,32 @@ export default function TabManada({ convs, setConvs, target, setTarget }) {
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark">
       <div className="px-5 pt-10 pb-4 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Mi Manada</h1>
+          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Mi manada</h1>
           {totalUnread > 0 && (
             <span className="bg-primary text-gray-900 text-xs font-extrabold px-2.5 py-1 rounded-full">{totalUnread} nuevos</span>
           )}
         </div>
-        <p className="text-sm text-text-sec font-medium mt-1">Mensajes con tu comunidad</p>
+        <p className="text-sm text-text-sec font-medium mt-1">Conversaciones y coordinación cercana</p>
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-8 space-y-2">
+        {!seenManada && (
+          <div className="mb-2 bg-primary/10 border border-primary/20 rounded-2xl p-4 flex gap-3">
+            <span className="text-2xl flex-shrink-0">💬</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">Tu círculo de confianza</p>
+              <p className="text-xs text-text-sec font-medium leading-relaxed">Aquí conversas y te coordinas con personas o grupos cercanos de confianza para pasear, pedir ayuda o cuidar a tus mascotas.</p>
+            </div>
+            <button onClick={() => { localStorage.setItem('seen_manada', '1'); setSeenManada(true) }} className="text-text-sec flex-shrink-0 mt-0.5">
+              <Icon name="close" className="text-base" />
+            </button>
+          </div>
+        )}
         {convs.length === 0 && (
-          <div className="text-center pt-16">
+          <div className="text-center pt-12">
             <span className="text-5xl">💬</span>
-            <p className="text-text-sec font-semibold text-sm mt-3">Aún no tienes mensajes</p>
-            <p className="text-text-sec text-xs mt-1">Conéctate con dueños en la comunidad</p>
+            <p className="text-gray-700 dark:text-gray-200 font-extrabold text-base mt-4">Sin conversaciones activas</p>
+            <p className="text-text-sec text-sm font-medium mt-2 leading-relaxed px-4">Crea un grupo o conecta con personas cercanas para pasear, pedir ayuda o coordinar.</p>
           </div>
         )}
         {convs.map(c => (

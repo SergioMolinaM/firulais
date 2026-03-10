@@ -11,7 +11,7 @@ export default function TabPerfil({ onLogout }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const view = pathname.endsWith('/settings') ? 'settings' : pathname.endsWith('/addpet') ? 'addpet' : 'main'
-  const [newPet,   setNewPet]   = useState({ name: '', breed: 'Quiltro (Mezcla)', birthYear: new Date().getFullYear() - 3 })
+  const [newPet,   setNewPet]   = useState({ name: '', breed: 'Quiltro (Mezcla)', birthYear: new Date().getFullYear() - 3, microchip: '' })
   const [saving,   setSaving]   = useState(false)
   const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'))
   const [copied,   setCopied]   = useState(false)
@@ -39,7 +39,7 @@ export default function TabPerfil({ onLogout }) {
   async function saveNewPet() {
     if (!newPet.name.trim()) return
     setSaving(true)
-    const p = { id: Date.now().toString(), name: newPet.name, breed: newPet.breed, birthYear: newPet.birthYear, ownerName: user?.name, photoUrl: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=300' }
+    const p = { id: Date.now().toString(), name: newPet.name, breed: newPet.breed, birthYear: newPet.birthYear, ownerName: user?.name, photoUrl: null, microchip: newPet.microchip || null, reminders: [] }
     await addPet(p)
     setNewPet({ name: '', breed: 'Quiltro (Mezcla)', birthYear: new Date().getFullYear() - 3 })
     setSaving(false)
@@ -68,6 +68,13 @@ export default function TabPerfil({ onLogout }) {
         <div>
           <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block">Año de nacimiento</label>
           <input type="number" className="input-base" value={newPet.birthYear} min={2010} max={2026} onChange={e => setNewPet(p => ({ ...p, birthYear: parseInt(e.target.value) }))} />
+        </div>
+        <div>
+          <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block flex items-center gap-2">
+            Microchip <span className="text-[10px] font-semibold text-text-sec normal-case tracking-normal">(privado, solo visible para ti)</span>
+          </label>
+          <input className="input-base" placeholder="Número de microchip (opcional)" value={newPet.microchip} onChange={e => setNewPet(p => ({ ...p, microchip: e.target.value }))} />
+          <p className="text-xs text-text-sec font-medium mt-1">El microchip ayuda a identificar a tu mascota en caso de pérdida. No se muestra públicamente.</p>
         </div>
         <button onClick={saveNewPet} disabled={saving || !newPet.name.trim()} className="w-full bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-primary/20 active:scale-95 transition-transform disabled:opacity-70 mt-2">
           {saving ? 'Guardando...' : 'Agregar mascota'}
@@ -106,14 +113,25 @@ export default function TabPerfil({ onLogout }) {
           </button>
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-red-500 border-t border-gray-100 dark:border-border-dark"
+            className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-border-dark text-red-500"
           >
             <Icon name="logout" className="text-lg text-red-500" />
             <span className="text-sm font-extrabold">Cerrar sesión</span>
           </button>
+          <button
+            onClick={() => { if (window.confirm('¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.')) onLogout() }}
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-red-400"
+          >
+            <Icon name="delete_forever" className="text-lg text-red-400" />
+            <span className="text-sm font-semibold">Eliminar mi cuenta</span>
+          </button>
         </Section>
 
-        <p className="text-center text-xs text-text-sec font-medium pt-2">Firulais v0.1.0 · Hecho con 🐾 en Chile</p>
+        <div className="pt-4 pb-2 text-center space-y-1">
+          <p className="text-xs text-text-sec font-medium">Firulais v0.1.0 · Hecho con 🐾 en Chile</p>
+          <p className="text-xs text-text-sec font-medium">© 2026 Tercera Letra SpA · Todos los derechos reservados</p>
+          <p className="text-xs text-text-sec font-medium">Tu información personal es privada y nunca se comparte sin tu consentimiento.</p>
+        </div>
       </div>
     </div>
   )
@@ -129,31 +147,13 @@ export default function TabPerfil({ onLogout }) {
 
       <div className="px-5 mb-5">
         <div className="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4">
             <Avatar src={user?.photoUrl} size={16} ring />
             <div>
               <p className="font-extrabold text-xl text-gray-900 dark:text-white">{user?.name}</p>
               <p className="text-sm text-text-sec font-medium">{user?.email || 'Sin email'}</p>
               <p className="text-xs text-text-sec font-medium mt-0.5">Miembro desde {user?.joinDate ? new Date(user.joinDate).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }) : 'hoy'}</p>
             </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1 bg-primary/10 rounded-xl py-3 text-center">
-              <p className="text-xl font-extrabold text-primary">{user?.points || 0}</p>
-              <p className="text-xs text-text-sec font-semibold">Puntos</p>
-            </div>
-            {myRankData && (
-              <>
-                <div className="flex-1 bg-gray-50 dark:bg-bg-dark rounded-xl py-3 text-center">
-                  <p className="text-xl font-extrabold text-gray-900 dark:text-white">{myRankData.walks}</p>
-                  <p className="text-xs text-text-sec font-semibold">Paseos</p>
-                </div>
-                <div className="flex-1 bg-gray-50 dark:bg-bg-dark rounded-xl py-3 text-center">
-                  <p className="text-xl font-extrabold text-gray-900 dark:text-white">{myRankData.waste}</p>
-                  <p className="text-xs text-text-sec font-semibold">Desechos</p>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>
@@ -166,19 +166,51 @@ export default function TabPerfil({ onLogout }) {
           </button>
         </div>
         {pets.length === 0 && (
-          <p className="text-sm text-text-sec font-medium">No tienes mascotas registradas.</p>
+          <div className="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm text-center">
+            <span className="text-4xl block mb-2">🐾</span>
+            <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">Completa tu perfil</p>
+            <p className="text-xs text-text-sec font-medium mb-3">Registra una o más mascotas para llevar su historial, vacunas y recordatorios.</p>
+            <button onClick={() => navigate('/perfil/addpet')} className="bg-primary text-gray-900 font-extrabold py-2.5 px-5 rounded-xl text-sm active:scale-95 transition-transform">
+              Agregar primera mascota
+            </button>
+          </div>
         )}
         <div className="space-y-3">
           {pets.map(p => (
             <div key={p.id} className="bg-white dark:bg-surface-dark rounded-2xl shadow-sm overflow-hidden">
-              <img src={p.photoUrl} className="w-full aspect-[3/1] object-cover object-top" alt="" />
-              <div className="p-4 flex items-center gap-4">
-                <div className="flex-1">
-                  <p className="font-extrabold text-lg text-gray-900 dark:text-white">{p.name}</p>
-                  <p className="text-sm text-text-sec font-medium">{p.breed}</p>
-                  <p className="text-xs text-text-sec font-medium">{new Date().getFullYear() - p.birthYear} años · Nacido en {p.birthYear}</p>
+              {/* Foto o avatar predeterminado */}
+              {p.photoUrl
+                ? <img src={p.photoUrl} className="w-full aspect-[3/1] object-cover object-top" alt="" />
+                : <div className="w-full aspect-[3/1] bg-primary/10 flex items-center justify-center"><span className="text-5xl">🐾</span></div>
+              }
+              <div className="p-4">
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="flex-1">
+                    <p className="font-extrabold text-lg text-gray-900 dark:text-white">{p.name}</p>
+                    <p className="text-sm text-text-sec font-medium">{p.breed}</p>
+                    <p className="text-xs text-text-sec font-medium">{new Date().getFullYear() - p.birthYear} años · Nacido/a en {p.birthYear}</p>
+                  </div>
                 </div>
-                <span className="text-4xl">🐾</span>
+                {p.microchip && (
+                  <div className="flex items-center gap-2 mb-3 bg-gray-50 dark:bg-bg-dark rounded-xl px-3 py-2">
+                    <Icon name="lock" className="text-text-sec text-sm" />
+                    <p className="text-xs text-text-sec font-semibold">Microchip: {p.microchip}</p>
+                    <span className="ml-auto text-[10px] text-text-sec font-medium">Solo tú</span>
+                  </div>
+                )}
+                {/* Recordatorios */}
+                <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2">Recordatorios</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[['vaccines', 'Vacunas', '💉'], ['bath', 'Baño', '🛁'], ['deworming', 'Desparasitación', '🌿'], ['checkup', 'Control general', '🩺']].map(([key, label, emoji]) => (
+                    <div key={key} className="bg-gray-50 dark:bg-bg-dark rounded-xl px-3 py-2.5 flex items-center gap-2">
+                      <span className="text-base">{emoji}</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-extrabold text-gray-700 dark:text-gray-300 truncate">{label}</p>
+                        <p className="text-[10px] text-text-sec font-medium">Próximamente</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
@@ -186,7 +218,7 @@ export default function TabPerfil({ onLogout }) {
       </div>
 
       <div className="px-5 pb-8">
-        <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-3">Canjear puntos</p>
+        <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-3">Puntos y beneficios</p>
         <div className="bg-primary/10 border border-primary/20 rounded-2xl p-5">
           <div className="flex items-center gap-3 mb-3">
             <span className="text-3xl">🏆</span>

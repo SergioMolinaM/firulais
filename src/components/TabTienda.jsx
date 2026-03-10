@@ -7,6 +7,7 @@ export default function TabTienda() {
   const { user } = useApp()
   const [cat, setCat] = useState('Todos')
   const [selected, setSelected] = useState(null)
+  const [seenTienda, setSeenTienda] = useState(() => !!localStorage.getItem('seen_tienda'))
 
   const items = cat === 'Todos' ? MOCK_MARKET.items : MOCK_MARKET.items.filter(i => i.cat === cat)
 
@@ -71,7 +72,20 @@ export default function TabTienda() {
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark overflow-y-auto no-scrollbar">
       <div className="px-5 pt-10 pb-3">
         <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1">Tienda</h1>
-        <p className="text-sm text-text-sec font-medium mb-4">Servicios y productos para tu perro</p>
+        <p className="text-sm text-text-sec font-medium mb-4">Beneficios y servicios para ti y tus mascotas</p>
+
+        {!seenTienda && (
+          <div className="mb-4 bg-primary/10 border border-primary/20 rounded-2xl p-4 flex gap-3">
+            <span className="text-2xl flex-shrink-0">🏪</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">Descubre negocios pet-friendly</p>
+              <p className="text-xs text-text-sec font-medium leading-relaxed">Veterinarias, alimentos, paseadores, estadías y más. Contacta directamente o canjea tus puntos.</p>
+            </div>
+            <button onClick={() => { localStorage.setItem('seen_tienda', '1'); setSeenTienda(true) }} className="text-text-sec flex-shrink-0 mt-0.5">
+              <Icon name="close" className="text-base" />
+            </button>
+          </div>
+        )}
 
         {/* Sponsored Banner */}
         <div className="relative rounded-2xl overflow-hidden mb-5 shadow-lg">

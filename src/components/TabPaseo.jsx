@@ -5,6 +5,8 @@ import WalkMap from './WalkMap'
 import { useApp } from '../context/AppContext'
 import { db } from '../lib/firebase'
 
+const SEEN_KEY = 'seen_paseo'
+
 export default function TabPaseo({ onShareWalk }) {
   const { pet, uid, addPoints: onAddPoints } = useApp()
   const [walking,      setWalking]      = useState(false)
@@ -172,11 +174,11 @@ export default function TabPaseo({ onShareWalk }) {
             onClick={shareWalk}
             className="w-full bg-primary text-gray-900 font-extrabold py-3.5 rounded-2xl text-base shadow-lg shadow-primary/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
           >
-            <Icon name="share" className="text-xl" /> Compartir en comunidad
+            <Icon name="share" className="text-xl" /> Compartir en Mi Barrio
           </button>
         ) : (
           <div className="w-full bg-primary/10 border border-primary/20 text-primary font-extrabold py-3.5 rounded-2xl text-base text-center">
-            ✓ Compartido en comunidad
+            ✓ Compartido en Mi Barrio
           </div>
         )}
         <button
@@ -220,13 +222,32 @@ export default function TabPaseo({ onShareWalk }) {
   const totalPts = history.reduce((s, w) => s + w.points, 0)
   const totalWalks = history.length
   const totalWaste = history.reduce((s, w) => s + w.waste, 0)
+  const [seenPaseo, setSeenPaseo] = useState(() => !!localStorage.getItem(SEEN_KEY))
+
+  function dismissPaseoCard() {
+    localStorage.setItem(SEEN_KEY, '1')
+    setSeenPaseo(true)
+  }
 
   return (
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark overflow-y-auto no-scrollbar">
       <div className="px-6 pt-10 pb-6">
         <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-1">Listo para salir</p>
-        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Paseo con {pet?.name || 'tu perro'}</h1>
+        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Paseo con {pet?.name || 'tu mascota'}</h1>
       </div>
+
+      {!seenPaseo && (
+        <div className="mx-6 mb-5 bg-primary/10 border border-primary/20 rounded-2xl p-4 flex gap-3">
+          <span className="text-2xl flex-shrink-0">🐾</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">¡Bienvenido/a a Paseo!</p>
+            <p className="text-xs text-text-sec font-medium leading-relaxed">Aquí registras salidas con tus mascotas, acumulas puntos y llevas un historial. Cada desecho recogido suma puntos extra.</p>
+          </div>
+          <button onClick={dismissPaseoCard} className="text-text-sec flex-shrink-0 mt-0.5">
+            <Icon name="close" className="text-base" />
+          </button>
+        </div>
+      )}
 
       <div className="px-6 mb-5">
         <div className="grid grid-cols-3 gap-3">
@@ -256,22 +277,32 @@ export default function TabPaseo({ onShareWalk }) {
 
       <div className="px-6 mb-3 flex items-center justify-between">
         <p className="text-sm font-extrabold text-gray-900 dark:text-white">Paseos recientes</p>
-        <button onClick={() => setView('history')} className="text-xs font-bold text-primary">Ver todo</button>
+        {history.length > 0 && (
+          <button onClick={() => setView('history')} className="text-xs font-bold text-primary">Ver todo</button>
+        )}
       </div>
 
       <div className="px-6 pb-8 space-y-3">
-        {history.slice(0, 3).map(w => (
-          <div key={w.id} className="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex items-center gap-4">
-            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Icon name="directions_run" filled className="text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-extrabold text-sm text-gray-900 dark:text-white">{w.date}</p>
-              <p className="text-xs text-text-sec font-medium">{w.duration} · {w.distance} · {w.waste} desechos</p>
-            </div>
-            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">+{w.points}</span>
+        {history.length === 0 ? (
+          <div className="text-center py-8">
+            <span className="text-4xl block mb-3">🏁</span>
+            <p className="text-sm font-extrabold text-gray-700 dark:text-gray-200">Aún no registras paseos</p>
+            <p className="text-xs text-text-sec font-medium mt-1">Pulsa "Iniciar paseo" para empezar.</p>
           </div>
-        ))}
+        ) : (
+          history.slice(0, 3).map(w => (
+            <div key={w.id} className="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex items-center gap-4">
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Icon name="directions_run" filled className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-extrabold text-sm text-gray-900 dark:text-white">{w.date}</p>
+                <p className="text-xs text-text-sec font-medium">{w.duration} · {w.distance} · {w.waste} desechos</p>
+              </div>
+              <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full flex-shrink-0">+{w.points}</span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   )

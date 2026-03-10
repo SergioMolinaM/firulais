@@ -4,6 +4,14 @@ import { MOCK_VET_ENTRIES, ETOLOGY_TIPS } from '../data/mockData'
 import { askGemini } from '../lib/gemini'
 import { useApp } from '../context/AppContext'
 
+const QUICK_TOPICS = [
+  { icon: '💉', label: 'Vacunas', prompt: '¿Cuáles son las vacunas obligatorias para perros en Chile y cada cuánto tiempo se aplican?' },
+  { icon: '🥩', label: 'Alimentación', prompt: '¿Cuánto alimento debo darle a mi perro al día según su peso?' },
+  { icon: '🌿', label: 'Desparasitación', prompt: '¿Cada cuánto debo desparasitar a mi perro y qué productos recomiendas?' },
+  { icon: '🧠', label: 'Comportamiento', prompt: '¿Qué puedo hacer si mi perro muerde objetos de la casa o tiene ansiedad de separación?' },
+  { icon: '🚨', label: '¿Cuándo ir al vet?', prompt: '¿Cuáles son las señales de emergencia que indican que debo llevar a mi perro al veterinario de inmediato?' },
+]
+
 export default function TabVeterinario() {
   const { pet } = useApp()
   const [sub, setSub] = useState('chat')
@@ -17,7 +25,8 @@ export default function TabVeterinario() {
   return (
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark">
       <div className="px-5 pt-10 pb-3 flex-shrink-0">
-        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-4">Veterinario</h1>
+        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1">Vet</h1>
+        <p className="text-xs text-text-sec font-semibold mb-4">Orientación básica · No reemplaza atención profesional</p>
         <div className="flex gap-2">
           {SUB_TABS.map(t => (
             <button
@@ -46,16 +55,17 @@ function VetBot({ pet }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
+  const onlyGreeting = msgs.length === 1
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [msgs, loading])
 
-  async function send() {
-    const text = input.trim()
-    if (!text || loading) return
+  async function send(text) {
+    const t = (text ?? input).trim()
+    if (!t || loading) return
     setInput('')
-    const userMsg = { role: 'user', text }
+    const userMsg = { role: 'user', text: t }
     const newMsgs = [...msgs, userMsg]
     setMsgs(newMsgs)
     setLoading(true)
@@ -72,6 +82,22 @@ function VetBot({ pet }) {
         <Icon name="warning" filled className="text-amber-500 text-sm flex-shrink-0" />
         <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold">Solo temas veterinarios. No reemplaza consulta profesional.</p>
       </div>
+      {onlyGreeting && (
+        <div className="px-5 mb-2 flex-shrink-0">
+          <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2">Consultas frecuentes</p>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {QUICK_TOPICS.map(t => (
+              <button
+                key={t.label}
+                onClick={() => send(t.prompt)}
+                className="flex-shrink-0 flex items-center gap-1.5 bg-white dark:bg-surface-dark border border-gray-200 dark:border-border-dark rounded-full px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 active:scale-95 transition-transform"
+              >
+                <span>{t.icon}</span>{t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-2 space-y-3">
         {msgs.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -106,7 +132,7 @@ function VetBot({ pet }) {
           onKeyDown={e => e.key === 'Enter' && send()}
         />
         <button
-          onClick={send}
+          onClick={() => send()}
           disabled={!input.trim() || loading}
           className="w-11 h-11 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/20 active:scale-95 transition-transform disabled:opacity-40"
         >
