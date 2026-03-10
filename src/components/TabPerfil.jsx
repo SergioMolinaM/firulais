@@ -189,6 +189,11 @@ export default function TabPerfil({ onLogout }) {
               <p className="font-extrabold text-xl text-gray-900 dark:text-white">{user?.name}</p>
               <p className="text-sm text-text-sec font-medium">{user?.email || 'Sin email'}</p>
               <p className="text-xs text-text-sec font-medium mt-0.5">Miembro desde {user?.joinDate ? new Date(user.joinDate).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }) : 'hoy'}</p>
+              {!user?.photoUrl && (
+                <button onClick={() => userPhotoRef.current?.click()} className="text-xs text-primary font-extrabold mt-1.5 flex items-center gap-1">
+                  <Icon name="photo_camera" className="text-sm" /> Agregar foto
+                </button>
+              )}
             </div>
           </div>
         </div>

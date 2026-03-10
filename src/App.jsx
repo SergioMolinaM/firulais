@@ -14,12 +14,12 @@ import { db } from './lib/firebase'
 import { MOCK_CONVS } from './data/mockData'
 
 const NAV_TABS = [
-  { path: '/paseo',  icon: 'directions_run', label: 'Paseo'  },
-  { path: '/barrio', icon: 'location_city',  label: 'Barrio' },
-  { path: '/manada', icon: 'chat_bubble',    label: 'Manada' },
-  { path: '/vet',    icon: 'local_hospital', label: 'Vet'    },
-  { path: '/tienda', icon: 'storefront',     label: 'Tienda' },
-  { path: '/perfil', icon: 'person',         label: 'Perfil' },
+  { path: '/paseo',  icon: 'directions_run', label: 'Paseo'    },
+  { path: '/barrio', icon: 'location_city',  label: 'Mi barrio'},
+  { path: '/manada', icon: 'chat_bubble',    label: 'Manada'   },
+  { path: '/vet',    icon: 'local_hospital', label: 'Vet'      },
+  { path: '/tienda', icon: 'storefront',     label: 'Tienda'   },
+  { path: '/perfil', icon: 'person',         label: 'Perfil'   },
 ]
 
 export default function App() {

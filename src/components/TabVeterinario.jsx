@@ -14,19 +14,21 @@ const QUICK_TOPICS = [
 
 export default function TabVeterinario() {
   const { pet } = useApp()
-  const [sub, setSub] = useState('chat')
+  // VetBot desactivado: el endpoint /api/vetbot no está disponible aún.
+  // Tab por defecto: Diario.
+  const [sub, setSub] = useState('diary')
 
   const SUB_TABS = [
-    { key: 'chat', icon: 'smart_toy', label: 'VetBot' },
-    { key: 'diary', icon: 'book_2', label: 'Diario' },
-    { key: 'etology', icon: 'pets', label: 'Guía' },
+    { key: 'chat',    icon: 'smart_toy', label: 'ChatVet'  },
+    { key: 'diary',   icon: 'book_2',    label: 'Diario'   },
+    { key: 'etology', icon: 'pets',      label: 'Guía'     },
   ]
 
   return (
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark">
       <div className="px-5 pt-10 pb-3 flex-shrink-0">
         <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1">Vet</h1>
-        <p className="text-xs text-text-sec font-semibold mb-4">Orientación básica · No reemplaza atención profesional</p>
+        <p className="text-xs text-text-sec font-semibold mb-4">Orientaciones básicas para tus mascotas. No reemplazan la atención profesional.</p>
         <div className="flex gap-2">
           {SUB_TABS.map(t => (
             <button
@@ -40,9 +42,36 @@ export default function TabVeterinario() {
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
-        {sub === 'chat' && <VetBot pet={pet} />}
-        {sub === 'diary' && <VetDiary pet={pet} />}
+        {sub === 'chat'    && <VetBotDisabled />}
+        {sub === 'diary'   && <VetDiary pet={pet} />}
         {sub === 'etology' && <EtologyGuide />}
+      </div>
+    </div>
+  )
+}
+
+// VetBot desactivado hasta que el servicio esté disponible
+function VetBotDisabled() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full px-8 text-center pb-16">
+      <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-3xl flex items-center justify-center mb-5">
+        <Icon name="smart_toy" className="text-gray-400 text-4xl" />
+      </div>
+      <p className="font-extrabold text-lg text-gray-900 dark:text-white mb-2">ChatVet · Próximamente</p>
+      <p className="text-sm text-text-sec font-medium leading-relaxed mb-5">
+        El asistente de orientación veterinaria está en desarrollo. Mientras tanto, revisa la Guía de bienestar animal o consulta directamente con un profesional.
+      </p>
+      <div className="w-full space-y-2">
+        {[
+          { icon: '💉', text: 'Vacunas: revisa la Guía' },
+          { icon: '🥩', text: 'Alimentación: revisa la Guía' },
+          { icon: '🚨', text: 'Emergencia: ve al veterinario de inmediato' },
+        ].map(({ icon, text }) => (
+          <div key={text} className="flex items-center gap-3 bg-white dark:bg-surface-dark rounded-xl px-4 py-3 shadow-sm text-left">
+            <span className="text-lg">{icon}</span>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{text}</p>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -126,7 +155,7 @@ function VetBot({ pet }) {
       <div className="flex-shrink-0 px-5 pb-8 pt-3 flex items-center gap-3">
         <input
           className="flex-1 input-base py-3"
-          placeholder="¿Cómo le doy la pastilla a mi perro?"
+          placeholder="Escribe tu consulta sobre tu mascota…"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
@@ -145,6 +174,12 @@ function VetBot({ pet }) {
 
 function VetDiary({ pet }) {
   const [entries, setEntries] = useState(MOCK_VET_ENTRIES)
+  const [showAddToast, setShowAddToast] = useState(false)
+
+  function handleAddEntry() {
+    setShowAddToast(true)
+    setTimeout(() => setShowAddToast(false), 3000)
+  }
 
   const upcoming = entries.filter(e => {
     if (!e.nextDue) return false
@@ -153,7 +188,13 @@ function VetDiary({ pet }) {
   })
 
   return (
-    <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-8">
+    <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-8 relative">
+      {showAddToast && (
+        <div className="sticky top-0 z-10 bg-primary/10 border border-primary/20 rounded-xl px-4 py-2.5 mb-3 flex items-center gap-2">
+          <Icon name="info" filled className="text-primary text-base flex-shrink-0" />
+          <p className="text-xs text-gray-700 dark:text-gray-300 font-semibold">Registro manual próximamente. Por ahora los datos son de ejemplo.</p>
+        </div>
+      )}
       {upcoming.length > 0 && (
         <div className="mb-4">
           <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2">Próximas citas</p>
@@ -173,19 +214,31 @@ function VetDiary({ pet }) {
       )}
 
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest">Historial de {pet?.name || 'tu perro'}</p>
-        <button className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-sm active:scale-95 transition-transform">
-          <Icon name="add" filled className="text-gray-900 text-lg" />
+        <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest">Historial de {pet?.name || 'tu mascota'}</p>
+        <button
+          onClick={handleAddEntry}
+          title="Próximamente"
+          className="flex items-center gap-1.5 bg-white dark:bg-surface-dark border border-gray-200 dark:border-border-dark px-3 py-1.5 rounded-full text-xs font-extrabold text-text-sec shadow-sm active:scale-95 transition-transform"
+        >
+          <Icon name="add" className="text-sm" /> Agregar
         </button>
+      </div>
+
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-2.5 mb-3 flex gap-2 items-start">
+        <Icon name="info" className="text-amber-500 text-sm flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold leading-relaxed">
+          Datos de ejemplo. Aquí podrás registrar controles, desparasitación y otros cuidados de una o más mascotas.
+        </p>
       </div>
 
       <div className="space-y-3">
         {entries.map(e => (
-          <div key={e.id} className="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex gap-3">
+          <div key={e.id} className="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex gap-3 relative">
+            <span className="absolute top-3 right-3 text-[9px] font-extrabold uppercase tracking-wider bg-gray-100 dark:bg-gray-700 text-text-sec px-2 py-0.5 rounded-full">Demo</span>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${e.color}`}>
               <Icon name={e.icon} filled className="text-xl" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 pr-10">
               <div className="flex items-center justify-between mb-0.5">
                 <p className="font-extrabold text-sm text-gray-900 dark:text-white">{e.title}</p>
                 <span className="text-xs text-text-sec font-medium">{e.date}</span>
@@ -203,18 +256,45 @@ function VetDiary({ pet }) {
 }
 
 function EtologyGuide() {
+  const allCats = ['Todos', ...Array.from(new Set(ETOLOGY_TIPS.map(t => t.cat)))]
+  const [cat, setCat] = useState('Todos')
+  const filtered = cat === 'Todos' ? ETOLOGY_TIPS : ETOLOGY_TIPS.filter(t => t.cat === cat)
+
   return (
-    <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-8 space-y-3">
-      <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2">Guía de etología y nutrición</p>
-      {ETOLOGY_TIPS.map((tip, i) => (
-        <div key={i} className="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex gap-3">
-          <span className="text-3xl flex-shrink-0">{tip.icon}</span>
-          <div>
-            <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">{tip.title}</p>
-            <p className="text-xs text-text-sec font-medium leading-relaxed">{tip.text}</p>
+    <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
+      <div className="px-5">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-2.5 mb-3 flex gap-2 items-start">
+          <Icon name="info" className="text-amber-500 text-sm flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold leading-relaxed">
+            Orientaciones generales. Los artículos completos con fuentes oficiales se publicarán próximamente.
+          </p>
+        </div>
+        <div className="overflow-x-auto no-scrollbar -mx-5 mb-4">
+          <div className="flex gap-2 px-5 pb-1">
+            {allCats.map(c => (
+              <button
+                key={c}
+                onClick={() => setCat(c)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all ${cat === c ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
+              >
+                {c}
+              </button>
+            ))}
+            <div className="flex-shrink-0 w-5" />
           </div>
         </div>
-      ))}
+      </div>
+      <div className="px-5 space-y-3">
+        {filtered.map((tip, i) => (
+          <div key={i} className="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex gap-3">
+            <span className="text-3xl flex-shrink-0">{tip.icon}</span>
+            <div>
+              <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">{tip.title}</p>
+              <p className="text-xs text-text-sec font-medium leading-relaxed">{tip.text}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

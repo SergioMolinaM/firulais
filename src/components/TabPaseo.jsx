@@ -9,14 +9,23 @@ const SEEN_KEY = 'seen_paseo'
 
 export default function TabPaseo({ onShareWalk }) {
   const { pet, uid, addPoints: onAddPoints } = useApp()
-  const [walking,      setWalking]      = useState(false)
-  const [seconds,      setSeconds]      = useState(0)
-  const [wasteCount,   setWasteCount]   = useState(0)
-  const [realDistance, setRealDistance] = useState(0) // metros, de GPS
-  const [view,         setView]         = useState('home') // 'home' | 'active' | 'summary' | 'history'
-  const [lastWalk,     setLastWalk]     = useState(null)
-  const [history,      setHistory]      = useState([])
+  const [walking,        setWalking]        = useState(false)
+  const [seconds,        setSeconds]        = useState(0)
+  const [wasteCount,     setWasteCount]     = useState(0)
+  const [realDistance,   setRealDistance]   = useState(0)
+  const [view,           setView]           = useState('home')
+  const [lastWalk,       setLastWalk]       = useState(null)
+  const [history,        setHistory]        = useState([])
+  // ── Estos hooks DEBEN estar aquí arriba (Rules of Hooks) ──
+  const [seenPaseo,      setSeenPaseo]      = useState(() => !!localStorage.getItem(SEEN_KEY))
+  const [showWasteCheck, setShowWasteCheck] = useState(false)
+  const [showWasteInfo,  setShowWasteInfo]  = useState(false)
   const interval = useRef(null)
+
+  function dismissPaseoCard() {
+    localStorage.setItem(SEEN_KEY, '1')
+    setSeenPaseo(true)
+  }
 
   // Load walk history from Firestore when uid is available
   useEffect(() => {
@@ -40,6 +49,7 @@ export default function TabPaseo({ onShareWalk }) {
     setSeconds(0)
     setWasteCount(0)
     setRealDistance(0)
+    setShowWasteCheck(false)
     setWalking(true)
     setView('active')
   }
@@ -48,10 +58,24 @@ export default function TabPaseo({ onShareWalk }) {
     setWasteCount(c => c + 1)
   }
 
-  function endWalk() {
+  // Si no registraron desechos, pregunta antes de cerrar
+  function handleEndWalk() {
+    if (wasteCount === 0) {
+      setShowWasteCheck(true)
+    } else {
+      finishWalk(wasteCount)
+    }
+  }
+
+  function answerWaste(picked) {
+    setShowWasteCheck(false)
+    finishWalk(picked ? 1 : 0)
+  }
+
+  function finishWalk(wc) {
     setWalking(false)
-    const pts = 10 + wasteCount * 10
-    // Usar distancia GPS real si está disponible, si no, estimación por tiempo
+    setWasteCount(wc)
+    const pts = 10 + wc * 10
     const dist = realDistance > 0
       ? (realDistance / 1000).toFixed(1)
       : ((seconds / 60) * 0.065).toFixed(1)
@@ -60,7 +84,7 @@ export default function TabPaseo({ onShareWalk }) {
       date: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }),
       duration: `${Math.floor(seconds / 60)} min`,
       distance: `${dist} km`,
-      waste: wasteCount,
+      waste: wc,
       points: pts,
       shared: false,
     }
@@ -86,15 +110,70 @@ export default function TabPaseo({ onShareWalk }) {
     : ((seconds / 60) * 0.065).toFixed(1)
 
   if (view === 'active') return (
-    <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark slide-up">
+    <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark slide-up relative">
+
+      {/* Modal: ¿Recogiste los desechos? */}
+      {showWasteCheck && (
+        <div className="absolute inset-0 z-50 bg-gray-900/70 flex items-end">
+          <div className="w-full bg-white dark:bg-surface-dark rounded-t-3xl p-6 pb-10 slide-up max-h-full overflow-y-auto">
+            <div className="text-center mb-5">
+              <span className="text-4xl block mb-3">🗑️</span>
+              <p className="font-extrabold text-lg text-gray-900 dark:text-white">¿Recogiste los desechos de tu mascota?</p>
+              <p className="text-sm text-text-sec font-medium mt-2 leading-relaxed">
+                Registrar que dispusiste de forma adecuada y responsable los desechos de tu mascota suma puntos y ayuda a cuidar tu barrio.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => answerWaste(false)}
+                className="flex-1 bg-white dark:bg-bg-dark border-2 border-gray-200 dark:border-border-dark text-gray-700 dark:text-gray-300 font-extrabold py-4 rounded-2xl text-base active:scale-95 transition-transform"
+              >
+                No
+              </button>
+              <button
+                onClick={() => answerWaste(true)}
+                className="flex-1 bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-primary/20 active:scale-95 transition-transform"
+              >
+                Sí · +10 pts ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: ¿Por qué importa? */}
+      {showWasteInfo && (
+        <div className="absolute inset-0 z-50 bg-gray-900/70 flex items-end">
+          <div className="w-full bg-white dark:bg-surface-dark rounded-t-3xl p-6 pb-10 slide-up max-h-full overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-extrabold text-base text-gray-900 dark:text-white">¿Por qué importa?</p>
+              <button onClick={() => setShowWasteInfo(false)}>
+                <Icon name="close" className="text-text-sec text-xl" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+              Registrar que dispusiste de forma adecuada y responsable los desechos de tu mascota suma puntos y ayuda a cuidar tu barrio.
+            </p>
+            <p className="text-xs text-text-sec font-medium mt-3 leading-relaxed italic">
+              Los contenidos educativos sobre normativa local y disposición responsable se publicarán próximamente con fuentes oficiales y gubernamentales.
+            </p>
+            <button
+              onClick={() => setShowWasteInfo(false)}
+              className="w-full bg-primary text-gray-900 font-extrabold py-3.5 rounded-2xl text-base mt-5 active:scale-95 transition-transform"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Header compacto */}
       <div className="px-5 pt-10 pb-3 flex items-center justify-between flex-shrink-0">
-        <div>
+        <div className="min-w-0 flex-1 mr-3">
           <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest">Paseo activo</p>
-          <p className="text-base font-extrabold text-gray-900 dark:text-white mt-0.5">{pet?.name || 'tu perro'}</p>
+          <p className="text-base font-extrabold text-gray-900 dark:text-white mt-0.5 truncate">{pet?.name || 'tu mascota'}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <span className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white tabular-nums">
             {fmt(seconds)}
           </span>
@@ -124,18 +203,23 @@ export default function TabPaseo({ onShareWalk }) {
       <div className="px-5 pt-3 pb-6 flex-shrink-0 space-y-3">
         <div className="flex gap-3">
           {[
-            { icon: 'delete', label: 'Desechos', val: wasteCount },
-            { icon: 'emoji_events', label: 'Puntos',   val: `+${10 + wasteCount * 10}` },
-            { icon: 'route',  label: 'Distancia', val: `${displayKm} km` },
-          ].map(({ icon, label, val }) => (
-            <div key={label} className="flex-1 bg-white dark:bg-surface-dark rounded-2xl py-3 text-center shadow-sm">
+            { icon: 'delete', label: 'Desechos', val: wasteCount, info: true },
+            { icon: 'emoji_events', label: 'Puntos', val: `+${10 + wasteCount * 10}` },
+            { icon: 'route', label: 'Distancia', val: `${displayKm} km` },
+          ].map(({ icon, label, val, info }) => (
+            <button
+              key={label}
+              onClick={() => info && setShowWasteInfo(true)}
+              className="flex-1 bg-white dark:bg-surface-dark rounded-2xl py-3 text-center shadow-sm relative"
+            >
               <p className="text-base font-extrabold text-primary">{val}</p>
               <p className="text-[10px] text-text-sec font-semibold mt-0.5">{label}</p>
-            </div>
+              {info && <span className="absolute top-1.5 right-1.5 text-[9px] text-text-sec font-bold">?</span>}
+            </button>
           ))}
         </div>
         <button
-          onClick={endWalk}
+          onClick={handleEndWalk}
           className="w-full bg-red-500 text-white font-extrabold py-4 rounded-2xl text-base shadow-lg active:scale-95 transition-transform"
         >
           Terminar paseo
@@ -145,40 +229,63 @@ export default function TabPaseo({ onShareWalk }) {
   )
 
   if (view === 'summary') return (
-    <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark px-6 pt-10 pb-8 slide-up">
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-primary/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-4xl">🐾</span>
-        </div>
-        <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white">¡Buen paseo!</h2>
-        <p className="text-text-sec text-sm font-medium mt-1">Ganaste <span className="text-primary font-extrabold">+{lastWalk?.points} pts</span></p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          { icon: 'timer', label: 'Duración', val: lastWalk?.duration },
-          { icon: 'route', label: 'Distancia', val: lastWalk?.distance },
-          { icon: 'delete', label: 'Desechos', val: lastWalk?.waste },
-        ].map(({ icon, label, val }) => (
-          <div key={label} className="bg-white dark:bg-surface-dark rounded-2xl p-4 text-center shadow-sm">
-            <Icon name={icon} filled className="text-primary text-2xl mb-1" />
-            <p className="text-lg font-extrabold text-gray-900 dark:text-white">{val}</p>
-            <p className="text-xs text-text-sec font-medium">{label}</p>
+    <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark overflow-y-auto no-scrollbar slide-up">
+      <div className="px-6 pt-10 pb-8">
+        <div className="text-center mb-5">
+          <div className="w-20 h-20 bg-primary/15 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-4xl">🐾</span>
           </div>
-        ))}
-      </div>
+          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white">¡Buen paseo!</h2>
+          <p className="text-text-sec text-sm font-medium mt-1">
+            Ganaste <span className="text-primary font-extrabold">+{lastWalk?.points} pts</span>
+          </p>
+          <p className="text-xs text-text-sec font-medium mt-0.5">
+            {(lastWalk?.waste ?? 0) > 0
+              ? `+10 pts paseo · +${(lastWalk?.waste ?? 0) * 10} pts desechos`
+              : '+10 pts paseo'}
+          </p>
+        </div>
 
-      <div className="space-y-3 mb-6">
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {[
+            { icon: 'timer',  label: 'Duración',  val: lastWalk?.duration },
+            { icon: 'route',  label: 'Distancia', val: lastWalk?.distance },
+            { icon: 'delete', label: 'Desechos',  val: lastWalk?.waste ?? 0 },
+          ].map(({ icon, label, val }) => (
+            <div key={label} className="bg-white dark:bg-surface-dark rounded-2xl p-4 text-center shadow-sm">
+              <Icon name={icon} filled className="text-primary text-2xl mb-1" />
+              <p className="text-lg font-extrabold text-gray-900 dark:text-white">{val}</p>
+              <p className="text-xs text-text-sec font-medium">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Sección desechos — siempre visible */}
+        <div className={`mb-5 rounded-2xl px-4 py-3 flex items-start gap-3 ${(lastWalk?.waste ?? 0) > 0 ? 'bg-primary/10 border border-primary/20' : 'bg-gray-50 dark:bg-surface-dark border border-gray-200 dark:border-border-dark'}`}>
+          <span className="text-xl flex-shrink-0 mt-0.5">🗑️</span>
+          <div>
+            <p className="text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-0.5">
+              {(lastWalk?.waste ?? 0) > 0
+                ? `${lastWalk.waste} desecho${lastWalk.waste !== 1 ? 's' : ''} registrado${lastWalk.waste !== 1 ? 's' : ''} · ¡Gracias!`
+                : 'Sin desechos registrados en este paseo'}
+            </p>
+            <p className="text-xs text-text-sec font-medium leading-relaxed">
+              Registrar que dispusiste de forma adecuada y responsable los desechos de tu mascota suma puntos y ayuda a cuidar tu barrio.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3 mb-6">
         {!lastWalk?.shared ? (
           <button
             onClick={shareWalk}
             className="w-full bg-primary text-gray-900 font-extrabold py-3.5 rounded-2xl text-base shadow-lg shadow-primary/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
           >
-            <Icon name="share" className="text-xl" /> Compartir en Mi Barrio
+            <Icon name="share" className="text-xl" /> Compartir en Mi barrio
           </button>
         ) : (
           <div className="w-full bg-primary/10 border border-primary/20 text-primary font-extrabold py-3.5 rounded-2xl text-base text-center">
-            ✓ Compartido en Mi Barrio
+            ✓ Compartido en Mi barrio
           </div>
         )}
         <button
@@ -188,6 +295,7 @@ export default function TabPaseo({ onShareWalk }) {
           Volver al inicio
         </button>
       </div>
+      </div>{/* /px-6 */}
     </div>
   )
 
@@ -219,21 +327,17 @@ export default function TabPaseo({ onShareWalk }) {
   )
 
   // Home view
-  const totalPts = history.reduce((s, w) => s + w.points, 0)
+  const totalPts   = history.reduce((s, w) => s + w.points, 0)
   const totalWalks = history.length
   const totalWaste = history.reduce((s, w) => s + w.waste, 0)
-  const [seenPaseo, setSeenPaseo] = useState(() => !!localStorage.getItem(SEEN_KEY))
-
-  function dismissPaseoCard() {
-    localStorage.setItem(SEEN_KEY, '1')
-    setSeenPaseo(true)
-  }
 
   return (
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark overflow-y-auto no-scrollbar">
       <div className="px-6 pt-10 pb-6">
         <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-1">Listo para salir</p>
-        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Paseo con {pet?.name || 'tu mascota'}</h1>
+        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white truncate">
+          {pet?.name ? `Paseo con ${pet.name}` : 'Paseo'}
+        </h1>
       </div>
 
       {!seenPaseo && (
@@ -249,20 +353,23 @@ export default function TabPaseo({ onShareWalk }) {
         </div>
       )}
 
-      <div className="px-6 mb-5">
+      <div className="px-6 mb-2">
         <div className="grid grid-cols-3 gap-3">
           {[
             { icon: 'directions_run', label: 'Paseos', val: totalWalks },
-            { icon: 'delete', label: 'Desechos', val: totalWaste },
-            { icon: 'emoji_events', label: 'Pts ganados', val: totalPts },
+            { icon: 'delete', label: 'Desechos dispuestos adecuadamente', val: totalWaste },
+            { icon: 'emoji_events', label: 'Puntos acumulados', val: totalPts },
           ].map(({ icon, label, val }) => (
             <div key={label} className="bg-white dark:bg-surface-dark rounded-2xl p-4 text-center shadow-sm">
               <Icon name={icon} filled className="text-primary text-xl mb-1" />
               <p className="text-xl font-extrabold text-gray-900 dark:text-white">{val}</p>
-              <p className="text-xs text-text-sec font-medium">{label}</p>
+              <p className="text-[10px] text-text-sec font-medium leading-tight mt-0.5">{label}</p>
             </div>
           ))}
         </div>
+        <p className="text-[11px] text-text-sec font-medium mt-2 text-center leading-relaxed">
+          Incluye puntos por paseo y por acciones responsables.
+        </p>
       </div>
 
       <div className="px-6 mb-5">

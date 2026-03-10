@@ -24,7 +24,7 @@ export function AppProvider({ children }) {
         const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
         if (snap.exists()) {
           const d = snap.data()
-          setUser({ name: d.name, email: d.email, photoUrl: d.photoUrl, points: d.points, joinDate: d.joinDate })
+          setUser({ name: d.name, email: d.email, hasPets: d.hasPets, photoUrl: d.photoUrl, points: d.points, joinDate: d.joinDate })
           setPets(d.pets ?? (d.pet ? [d.pet] : []))  // migración: pet antiguo → array
         }
       } catch { /* offline or permission error — continue */ }
@@ -43,6 +43,7 @@ export function AppProvider({ children }) {
     await setDoc(doc(db, 'users', currentUid), {
       name:     u.name,
       email:    u.email,
+      hasPets:  u.hasPets,
       photoUrl: u.photoUrl,
       points:   u.points,
       joinDate: u.joinDate,

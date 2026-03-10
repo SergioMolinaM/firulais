@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { collection, query, orderBy, limit, onSnapshot, addDoc, updateDoc, doc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot, addDoc, updateDoc, doc, arrayUnion, arrayRemove, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { Icon, Avatar } from './ui'
 import { MOCK_LOST, MOCK_ADOPTION, MOCK_RANKING } from '../data/mockData'
 import { useApp } from '../context/AppContext'
@@ -18,11 +18,15 @@ const POST_CATS = [
 
 export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
   const { user, pet, uid } = useApp()
-  const [sub, setSub]           = useState('feed')
-  const [feed, setFeed]         = useState([])
+  const [sub, setSub]               = useState('feed')
+  const [feed, setFeed]             = useState([])
   const [lostFilter, setLostFilter] = useState('todos')
   const [selectedLost, setSelectedLost] = useState(null)
-  const [showInfo, setShowInfo] = useState(() => !localStorage.getItem('seen_barrio'))
+  const [showInfo, setShowInfo]     = useState(() => !localStorage.getItem('seen_barrio'))
+  const [showCompose, setShowCompose]   = useState(false)
+  const [newPostCat, setNewPostCat]     = useState('momento')
+  const [newPostText, setNewPostText]   = useState('')
+  const [posting, setPosting]           = useState(false)
 
   // Feed en tiempo real desde Firestore
   useEffect(() => {
@@ -53,6 +57,34 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
     onClearShared()
   }, [sharedWalk])
 
+  async function submitPost() {
+    const text = newPostText.trim()
+    if (!text || !uid) return
+    setPosting(true)
+    const now = Timestamp.fromDate(new Date())
+    const postData = {
+      authorUid: uid,
+      user:      user?.name || 'Tú',
+      avatar:    user?.photoUrl || null,
+      img:       null,
+      caption:   text,
+      category:  newPostCat,
+      loc:       'Mi barrio',
+      createdAt: now,
+      likedBy:   [],
+    }
+    // Optimistic update: show immediately without waiting for Firestore
+    const tempId = `local_${Date.now()}`
+    setFeed(prev => [{ id: tempId, ...postData, liked: false }, ...prev])
+    setNewPostText('')
+    setNewPostCat('momento')
+    setShowCompose(false)
+    setPosting(false)
+    try {
+      await addDoc(collection(db, 'posts'), { ...postData, createdAt: serverTimestamp() })
+    } catch { /* offline — optimistic post already visible */ }
+  }
+
   async function toggleLike(postId) {
     if (!uid) return
     const post = feed.find(p => p.id === postId)
@@ -70,16 +102,61 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
   ]
 
   return (
-    <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark">
+    <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark relative">
+
+      {/* Modal: Publicar en Mi barrio */}
+      {showCompose && (
+        <div className="absolute inset-0 z-50 bg-black/40 flex items-end">
+          <div className="w-full bg-white dark:bg-surface-dark rounded-t-3xl p-6 pb-10 slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">Publicar en Mi barrio</h3>
+              <button onClick={() => setShowCompose(false)}>
+                <Icon name="close" className="text-text-sec text-xl" />
+              </button>
+            </div>
+            <select
+              value={newPostCat}
+              onChange={e => setNewPostCat(e.target.value)}
+              className="input-base mb-3"
+            >
+              {POST_CATS.map(c => <option key={c.key} value={c.key}>{c.emoji} {c.label}</option>)}
+            </select>
+            <textarea
+              value={newPostText}
+              onChange={e => setNewPostText(e.target.value)}
+              className="input-base mb-4 resize-none"
+              rows={4}
+              placeholder="Comparte un dato útil, una recomendación, una alerta o una mejora para empezar…"
+            />
+            <button
+              onClick={submitPost}
+              disabled={!newPostText.trim() || posting}
+              className="w-full bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-95 transition-transform"
+            >
+              {posting ? 'Publicando…' : 'Publicar'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="px-5 pt-10 pb-3 flex-shrink-0">
-        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-4">Barrio</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Mi barrio</h1>
+          <button
+            onClick={() => setShowCompose(true)}
+            className="flex items-center gap-1.5 bg-primary text-gray-900 font-extrabold px-4 py-2 rounded-full text-xs shadow-sm active:scale-95 transition-transform"
+          >
+            <Icon name="add" className="text-sm" /> Publicar
+          </button>
+        </div>
 
         {/* Tarjeta de bienvenida — primera vez */}
         {showInfo && (
           <div className="mb-4 bg-primary/10 border border-primary/20 rounded-2xl p-4 flex gap-3">
             <span className="text-2xl flex-shrink-0">🏘️</span>
             <div className="flex-1">
-              <p className="font-extrabold text-sm text-gray-900 dark:text-white">Bienvenido/a al Barrio</p>
+              <p className="font-extrabold text-sm text-gray-900 dark:text-white">Bienvenido / Bienvenida a</p>
+              <p className="font-extrabold text-sm text-primary">Mi barrio</p>
               <p className="text-xs text-text-sec font-medium mt-1 leading-relaxed">Aquí ves información útil de tu entorno, compartes datos, reportas problemas y ayudas a convivir mejor.</p>
             </div>
             <button onClick={() => { localStorage.setItem('seen_barrio', '1'); setShowInfo(false) }} className="flex-shrink-0 text-text-sec">
@@ -88,21 +165,25 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
           </div>
         )}
 
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {SUB_TABS.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setSub(t.key)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-extrabold transition-all ${sub === t.key ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
-            >
-              <Icon name={t.icon} className="text-sm" />{t.label}
-            </button>
-          ))}
+        {/* Tabs: scroll wrapper separado del flex para iOS Safari */}
+        <div className="overflow-x-auto no-scrollbar -mx-5">
+          <div className="flex gap-2 px-5 pb-1">
+            {SUB_TABS.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setSub(t.key)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-extrabold transition-all ${sub === t.key ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
+              >
+                <Icon name={t.icon} className="text-sm" />{t.label}
+              </button>
+            ))}
+            <div className="flex-shrink-0 w-5" />
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
-        {sub === 'feed'    && <FeedView feed={feed} onLike={toggleLike} onMessage={onMessage} />}
+        {sub === 'feed'    && <FeedView feed={feed} onLike={toggleLike} onMessage={onMessage} onCompose={() => setShowCompose(true)} />}
         {sub === 'alertas' && <AlertasView filter={lostFilter} setFilter={setLostFilter} selected={selectedLost} setSelected={setSelectedLost} />}
         {sub === 'adopt'   && <AdoptView />}
         {sub === 'ranking' && <RankingView user={user} />}
@@ -111,7 +192,7 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
   )
 }
 
-function FeedView({ feed, onLike, onMessage }) {
+function FeedView({ feed, onLike, onMessage, onCompose }) {
   const { user } = useApp()
   const [openComment, setOpenComment]   = useState(null)
   const [commentDraft, setCommentDraft] = useState('')
@@ -129,10 +210,18 @@ function FeedView({ feed, onLike, onMessage }) {
   const getCatLabel = key => POST_CATS.find(c => c.key === key)?.label || ''
 
   if (feed.length === 0) return (
-    <div className="text-center pt-20 px-8">
+    <div className="text-center pt-16 px-8">
       <span className="text-5xl">🏘️</span>
-      <p className="text-gray-700 dark:text-gray-200 font-extrabold text-base mt-4">El feed está vacío</p>
-      <p className="text-text-sec text-sm font-medium mt-2 leading-relaxed">Aún no hay publicaciones en tu zona. Comparte un dato útil, una recomendación o una mejora para el barrio.</p>
+      <p className="text-gray-700 dark:text-gray-200 font-extrabold text-base mt-4">Aún no hay publicaciones</p>
+      <p className="text-text-sec text-sm font-medium mt-2 mb-5 leading-relaxed">
+        Comparte un dato útil, una recomendación, una alerta o una mejora para empezar.
+      </p>
+      <button
+        onClick={onCompose}
+        className="bg-primary text-gray-900 font-extrabold py-3 px-6 rounded-2xl text-sm shadow-lg shadow-primary/20 active:scale-95 transition-transform"
+      >
+        Publicar algo en Mi barrio
+      </button>
     </div>
   )
 
@@ -211,14 +300,15 @@ function AlertasView({ filter, setFilter, selected, setSelected }) {
         <Icon name="arrow_back" className="text-base" /> Volver
       </button>
       <div className="bg-white dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm">
-        <img src={selected.img} className="w-full aspect-video object-cover" alt="" />
+        <img src={selected.img} className="w-full aspect-video object-cover" alt=""
+          onError={e => { e.currentTarget.style.display = 'none' }} />
         <div className="p-5">
           <div className="flex items-start justify-between mb-3">
             <div>
               <h2 className="text-xl font-extrabold text-gray-900 dark:text-white">{selected.name}</h2>
               <p className="text-sm text-text-sec font-medium">{selected.breed} · {selected.color} · {selected.age}</p>
             </div>
-            <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase ${selected.status === 'perdido' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>{selected.status}</span>
+            <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase ${selected.status === 'perdido' ? 'bg-red-100 text-red-600' : selected.status === 'avistamiento' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-700'}`}>{selected.status === 'avistamiento' ? 'Avistada' : selected.status}</span>
           </div>
           <div className="space-y-2 text-sm mb-5">
             <p><span className="font-extrabold text-gray-700 dark:text-gray-300">Zona:</span> <span className="text-text-sec">{selected.zone}</span></p>
@@ -237,18 +327,28 @@ function AlertasView({ filter, setFilter, selected, setSelected }) {
     </div>
   )
 
+  const FILTER_LABELS = { todos: 'Todos', perdido: 'Perdida', encontrado: 'Encontrada', avistamiento: 'Avistada' }
+
   return (
     <div className="px-5">
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3 mb-4 flex gap-2 items-start">
-        <span className="text-lg flex-shrink-0">🔍</span>
-        <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold leading-relaxed">No hay alertas activas cerca de ti. Si perdiste, encontraste o avistaste una mascota, publícalo aquí para activar a la comunidad.</p>
+      <div className="bg-primary/10 border border-primary/20 rounded-2xl px-4 py-3 mb-4 flex gap-3 items-start">
+        <span className="text-lg flex-shrink-0 mt-0.5">🔍</span>
+        <div>
+          <p className="text-xs text-gray-700 dark:text-gray-300 font-extrabold mb-1">¿Perdiste, encontraste o avistaste una mascota?</p>
+          <p className="text-xs text-text-sec font-medium leading-relaxed">
+            Toca la tarjeta para ver los detalles y contactar al dueño/a. Solo se muestra la zona aproximada.
+          </p>
+        </div>
       </div>
-      <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
-        {filters.map(f => (
-          <button key={f} onClick={() => setFilter(f)} className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-extrabold capitalize transition-all ${filter === f ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}>
-            {f}
-          </button>
-        ))}
+      <div className="overflow-x-auto no-scrollbar -mx-5 mb-4">
+        <div className="flex gap-2 px-5 pb-1">
+          {filters.map(f => (
+            <button key={f} onClick={() => setFilter(f)} className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-extrabold transition-all ${filter === f ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}>
+              {FILTER_LABELS[f]}
+            </button>
+          ))}
+          <div className="flex-shrink-0 w-5" />
+        </div>
       </div>
       {visible.length === 0 ? (
         <p className="text-center text-sm text-text-sec font-medium pt-8">No hay alertas con ese filtro.</p>
@@ -256,11 +356,12 @@ function AlertasView({ filter, setFilter, selected, setSelected }) {
         <div className="space-y-3">
           {visible.map(dog => (
             <button key={dog.id} onClick={() => setSelected(dog)} className="w-full bg-white dark:bg-surface-dark rounded-2xl shadow-sm overflow-hidden flex text-left">
-              <img src={dog.img} className="w-24 h-24 object-cover flex-shrink-0" alt="" />
+              <img src={dog.img} className="w-24 h-24 object-cover flex-shrink-0" alt=""
+                onError={e => { e.currentTarget.style.display = 'none' }} />
               <div className="p-3 flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="font-extrabold text-sm text-gray-900 dark:text-white">{dog.name}</p>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${dog.status === 'perdido' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>{dog.status}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${dog.status === 'perdido' ? 'bg-red-100 text-red-600' : dog.status === 'avistamiento' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-700'}`}>{dog.status === 'avistamiento' ? 'Avistada' : dog.status}</span>
                 </div>
                 <p className="text-xs text-text-sec font-medium">{dog.breed}</p>
                 <p className="text-xs text-text-sec font-medium">{dog.zone} · {dog.date}</p>
@@ -283,7 +384,8 @@ function AdoptView() {
         <Icon name="arrow_back" className="text-base" /> Volver
       </button>
       <div className="bg-white dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm">
-        <img src={selected.img} className="w-full aspect-video object-cover" alt="" />
+        <img src={selected.img} className="w-full aspect-video object-cover" alt=""
+          onError={e => { e.currentTarget.style.display = 'none' }} />
         <div className="p-5">
           <div className="flex items-start justify-between mb-2">
             <h2 className="text-xl font-extrabold text-gray-900 dark:text-white">{selected.name}</h2>
@@ -308,6 +410,15 @@ function AdoptView() {
 
   return (
     <div className="px-5">
+      <div className="bg-primary/10 border border-primary/20 rounded-2xl px-4 py-3 mb-4 flex gap-3 items-start">
+        <span className="text-lg flex-shrink-0 mt-0.5">🐾</span>
+        <div>
+          <p className="text-xs text-gray-700 dark:text-gray-300 font-extrabold mb-1">Adopción responsable</p>
+          <p className="text-xs text-text-sec font-medium leading-relaxed">
+            Toca la tarjeta para ver más info y contactar. Para publicar una mascota en adopción, escríbenos a través de Mi barrio.
+          </p>
+        </div>
+      </div>
       <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-4">Mascotas en adopción</p>
       <div className="grid grid-cols-2 gap-3">
         {MOCK_ADOPTION.map(dog => (
@@ -337,10 +448,13 @@ function RankingView({ user }) {
         <div>
           <p className="font-extrabold text-sm text-gray-900 dark:text-white">Ranking mensual · Mar 2026</p>
           <p className="text-xs text-text-sec font-medium">
-            {myRank > 0 ? `Ocupas el puesto #${myRank}` : 'Pasea más para aparecer en el ranking'}
+            {myRank > 0 ? `Ocupas el puesto #${myRank} · ¡Sigue así!` : 'Suma paseos responsables para aparecer en el ranking.'}
           </p>
         </div>
       </div>
+      <p className="text-xs text-text-sec font-medium mb-3 leading-relaxed">
+        Premia paseos responsables y disposición adecuada de desechos. No es solo quién pasea más, sino cómo.
+      </p>
       <div className="space-y-2">
         {MOCK_RANKING.map((r, i) => (
           <div key={r.user} className={`bg-white dark:bg-surface-dark rounded-2xl p-4 flex items-center gap-3 shadow-sm ${r.user === user?.name ? 'ring-2 ring-primary' : ''}`}>

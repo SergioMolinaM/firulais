@@ -99,7 +99,7 @@ export default function TabManada({ convs, uid }) {
             <span className="bg-primary text-gray-900 text-xs font-extrabold px-2.5 py-1 rounded-full">{totalUnread} nuevos</span>
           )}
         </div>
-        <p className="text-sm text-text-sec font-medium mt-1">Conversaciones y coordinación cercana</p>
+        <p className="text-sm text-text-sec font-medium mt-1">Tu red cercana de confianza</p>
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-8 space-y-2">
@@ -107,8 +107,13 @@ export default function TabManada({ convs, uid }) {
           <div className="mb-2 bg-primary/10 border border-primary/20 rounded-2xl p-4 flex gap-3">
             <span className="text-2xl flex-shrink-0">💬</span>
             <div className="flex-1 min-w-0">
-              <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">Tu círculo de confianza</p>
-              <p className="text-xs text-text-sec font-medium leading-relaxed">Aquí conversas y te coordinas con personas o grupos cercanos de confianza para pasear, pedir ayuda o cuidar a tus mascotas.</p>
+              <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">¿Cómo funciona Mi manada?</p>
+              <p className="text-xs text-text-sec font-medium leading-relaxed">
+                Conéctate con personas cercanas, crea un grupo o inicia una conversación para coordinar paseos, pedir ayuda o cuidar a tus mascotas.
+              </p>
+              <p className="text-xs text-text-sec font-medium leading-relaxed mt-1.5">
+                Por ahora puedes iniciar conversaciones desde las publicaciones en Mi barrio. La creación de grupos está en desarrollo.
+              </p>
             </div>
             <button onClick={() => { localStorage.setItem('seen_manada', '1'); setSeenManada(true) }} className="text-text-sec flex-shrink-0 mt-0.5">
               <Icon name="close" className="text-base" />
@@ -116,10 +121,15 @@ export default function TabManada({ convs, uid }) {
           </div>
         )}
         {convs.length === 0 && (
-          <div className="text-center pt-12">
+          <div className="text-center pt-10 px-4">
             <span className="text-5xl">💬</span>
             <p className="text-gray-700 dark:text-gray-200 font-extrabold text-base mt-4">Sin conversaciones activas</p>
-            <p className="text-text-sec text-sm font-medium mt-2 leading-relaxed px-4">Crea un grupo o conecta con personas cercanas para pasear, pedir ayuda o coordinar.</p>
+            <p className="text-text-sec text-sm font-medium mt-2 leading-relaxed">
+              Aún no tienes conversaciones. Puedes iniciar una desde una publicación en Mi barrio.
+            </p>
+            <p className="text-xs text-text-sec font-medium mt-3 leading-relaxed italic">
+              La creación de grupos propios estará disponible próximamente.
+            </p>
           </div>
         )}
         {convs.map(c => (

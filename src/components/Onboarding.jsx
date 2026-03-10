@@ -26,12 +26,12 @@ export default function Onboarding({ onDone, onComplete, className = '' }) {
     if (step < 3) { setStep(s => s + 1); return }
 
     setSaving(true)
-    const user     = { name, email, hasPets: hasPets ?? false, photoUrl: `https://i.pravatar.cc/100?u=${name}`, points: 100, joinDate: new Date().toISOString() }
+    const user     = { name, email, hasPets: hasPets ?? false, photoUrl: null, points: 100, joinDate: new Date().toISOString() }
     const petsData = hasPets
       ? pets.filter(p => p.name.trim()).map((p, i) => ({
           id: `${Date.now()}_${i}`, name: p.name, breed: p.breed,
           birthYear: p.birthYear, ownerName: name,
-          photoUrl: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=300',
+          photoUrl: null,
         }))
       : []
     try {
@@ -41,7 +41,7 @@ export default function Onboarding({ onDone, onComplete, className = '' }) {
   }
 
   const TITLES = {
-    1: <><span className="text-primary">Bienvenido/a</span><br />a Firulais</>,
+    1: <>Bienvenido / Bienvenida a<br /><span className="text-primary">Firulais</span></>,
     2: <>Tu<br /><span className="text-primary">compañero/a</span></>,
     3: <><span className="text-primary">¡Todo</span><br />listo!</>,
   }
@@ -104,7 +104,7 @@ export default function Onboarding({ onDone, onComplete, className = '' }) {
                   className={`w-full p-3.5 rounded-2xl border-2 text-left transition-all ${hasPets === false ? 'border-primary bg-primary/10' : 'border-gray-200 dark:border-border-dark bg-white dark:bg-surface-dark'}`}
                 >
                   <p className="font-extrabold text-sm text-gray-900 dark:text-white">🏘️ No vivo con mascotas</p>
-                  <p className="text-xs text-text-sec font-medium mt-0.5">Quiero participar en mi barrio y ayudar</p>
+                  <p className="text-xs text-text-sec font-medium mt-0.5">Sin mascotas, pero quiero participar en mi barrio</p>
                 </button>
               </div>
             </Field>
@@ -151,9 +151,9 @@ export default function Onboarding({ onDone, onComplete, className = '' }) {
 
         {/* Paso 3: resumen */}
         {step === 3 && (
-          <div className="flex-1 flex flex-col items-center gap-5 pt-4">
-            <div className="w-28 h-28 rounded-3xl bg-primary/15 border-2 border-primary/30 flex items-center justify-center shadow-xl">
-              <span className="text-5xl">{hasPets ? '🐾' : '🏘️'}</span>
+          <div className="flex-1 flex flex-col items-center gap-4">
+            <div className="w-20 h-20 rounded-3xl bg-primary/15 border-2 border-primary/30 flex items-center justify-center shadow-lg">
+              <span className="text-4xl">{hasPets ? '🐾' : '🏘️'}</span>
             </div>
             <div className="text-center">
               <p className="font-extrabold text-xl text-gray-900 dark:text-white">{name}</p>
@@ -167,11 +167,11 @@ export default function Onboarding({ onDone, onComplete, className = '' }) {
             <div className="w-full space-y-2">
               {[
                 ['directions_run', hasPets ? 'Registra paseos y gana puntos' : 'Sigue el barrio y gana puntos'],
-                ['location_city',  'Barrio: información útil y comunidad'],
+                ['location_city',  'Mi barrio: información útil y comunidad'],
                 ['storefront',     'Canjea puntos en la Tienda'],
-                ['local_hospital', 'Orientación básica sobre bienestar animal'],
+                ['local_hospital', 'Orientaciones básicas sobre bienestar animal'],
               ].map(([icon, text], i) => (
-                <div key={i} className="flex items-center gap-3 bg-white dark:bg-surface-dark rounded-xl px-4 py-3 shadow-sm">
+                <div key={i} className="flex items-center gap-3 bg-white dark:bg-surface-dark rounded-xl px-4 py-2.5 shadow-sm">
                   <Icon name={icon} filled className="text-primary text-xl" />
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{text}</p>
                 </div>
@@ -183,7 +183,7 @@ export default function Onboarding({ onDone, onComplete, className = '' }) {
         <button
           onClick={next}
           disabled={saving || (step === 1 && hasPets === null)}
-          className="w-full mt-6 bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-primary/20 active:scale-95 transition-transform flex-shrink-0 disabled:opacity-50"
+          className="w-full mt-4 bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-primary/20 active:scale-95 transition-transform flex-shrink-0 disabled:opacity-50"
         >
           {saving ? 'Guardando...' : step < 3 ? 'Continuar →' : '¡Empezar!'}
         </button>

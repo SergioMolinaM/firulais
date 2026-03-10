@@ -75,17 +75,28 @@ export default function TabTienda() {
         <p className="text-sm text-text-sec font-medium mb-4">Beneficios y servicios para ti y tus mascotas</p>
 
         {!seenTienda && (
-          <div className="mb-4 bg-primary/10 border border-primary/20 rounded-2xl p-4 flex gap-3">
+          <div className="mb-3 bg-primary/10 border border-primary/20 rounded-2xl p-4 flex gap-3">
             <span className="text-2xl flex-shrink-0">🏪</span>
             <div className="flex-1 min-w-0">
-              <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">Descubre negocios pet-friendly</p>
-              <p className="text-xs text-text-sec font-medium leading-relaxed">Veterinarias, alimentos, paseadores, estadías y más. Contacta directamente o canjea tus puntos.</p>
+              <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">Beneficios y servicios para ti y tus mascotas</p>
+              <p className="text-xs text-text-sec font-medium leading-relaxed">Veterinarias, alimentos, paseadores, estadías y más. Contacta directamente.</p>
             </div>
             <button onClick={() => { localStorage.setItem('seen_tienda', '1'); setSeenTienda(true) }} className="text-text-sec flex-shrink-0 mt-0.5">
               <Icon name="close" className="text-base" />
             </button>
           </div>
         )}
+
+        {/* Explicación de puntos */}
+        <div className="mb-4 bg-white dark:bg-surface-dark border border-gray-100 dark:border-border-dark rounded-2xl p-4 flex gap-3 shadow-sm">
+          <span className="text-2xl flex-shrink-0">🏆</span>
+          <div>
+            <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-0.5">¿Cómo ganar puntos?</p>
+            <p className="text-xs text-text-sec font-medium leading-relaxed">
+              Se obtienen al registrar paseos responsables, disponer adecuadamente los desechos de tu mascota y participar en acciones útiles para tu barrio.
+            </p>
+          </div>
+        </div>
 
         {/* Sponsored Banner */}
         <div className="relative rounded-2xl overflow-hidden mb-5 shadow-lg">
@@ -98,17 +109,20 @@ export default function TabTienda() {
           </div>
         </div>
 
-        {/* Category filters */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {MOCK_MARKET.cats.map(c => (
-            <button
-              key={c}
-              onClick={() => setCat(c)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all ${cat === c ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
-            >
-              {c}
-            </button>
-          ))}
+        {/* Category filters — scroll wrapper separado del flex para iOS Safari */}
+        <div className="overflow-x-auto no-scrollbar -mx-5">
+          <div className="flex gap-2 px-5 pb-1">
+            {MOCK_MARKET.cats.map(c => (
+              <button
+                key={c}
+                onClick={() => setCat(c)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all ${cat === c ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
+              >
+                {c}
+              </button>
+            ))}
+            <div className="flex-shrink-0 w-5" />
+          </div>
         </div>
       </div>
 
@@ -135,11 +149,11 @@ export default function TabTienda() {
         {/* Advertise CTA */}
         <div className="bg-primary/10 border border-primary/20 rounded-2xl p-5 mt-2">
           <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">¿Tienes un negocio pet-friendly?</p>
-          <p className="text-xs text-text-sec font-medium mb-3">Llega a miles de dueños de mascotas en Santiago. Planes desde $29.990/mes.</p>
+          <p className="text-xs text-text-sec font-medium mb-3">Llega a dueños de mascotas en tu barrio. Escríbenos y te contamos cómo.</p>
           <button
             onClick={() => {
               const msg = encodeURIComponent('Hola, quiero anunciar mi negocio pet-friendly en Firulais. ¿Me pueden dar más información?')
-              window.open(`https://wa.me/56912345678?text=${msg}`, '_blank')
+              window.open(`https://wa.me/56981369445?text=${msg}`, '_blank')
             }}
             className="bg-primary text-gray-900 font-extrabold py-2.5 px-5 rounded-xl text-sm active:scale-95 transition-transform flex items-center gap-2"
           >
