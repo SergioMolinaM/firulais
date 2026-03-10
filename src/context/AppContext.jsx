@@ -67,6 +67,21 @@ export function AppProvider({ children }) {
     try { await updateDoc(doc(db, 'users', currentUid), { points: newPoints }) } catch { /* ignore */ }
   }
 
+  async function updateUserPhoto(url) {
+    setUser(u => ({ ...u, photoUrl: url }))
+    const currentUid = auth.currentUser?.uid
+    if (!currentUid) return
+    try { await updateDoc(doc(db, 'users', currentUid), { photoUrl: url }) } catch { /* ignore */ }
+  }
+
+  async function updatePetPhoto(petId, url) {
+    const newPets = pets.map(p => p.id === petId ? { ...p, photoUrl: url } : p)
+    setPets(newPets)
+    const currentUid = auth.currentUser?.uid
+    if (!currentUid) return
+    try { await updateDoc(doc(db, 'users', currentUid), { pets: newPets }) } catch { /* ignore */ }
+  }
+
   async function logout() {
     setLoading(true)
     setUser(null)
@@ -77,7 +92,7 @@ export function AppProvider({ children }) {
   }
 
   return (
-    <AppContext.Provider value={{ user, pets, pet: pets[0] ?? null, uid, loading, handleOnboarded, addPet, addPoints, logout }}>
+    <AppContext.Provider value={{ user, pets, pet: pets[0] ?? null, uid, loading, handleOnboarded, addPet, addPoints, updateUserPhoto, updatePetPhoto, logout }}>
       {children}
     </AppContext.Provider>
   )

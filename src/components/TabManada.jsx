@@ -1,35 +1,39 @@
 import { useState, useRef, useEffect } from 'react'
+import { doc, updateDoc } from 'firebase/firestore'
 import { Icon, Avatar } from './ui'
+import { db } from '../lib/firebase'
 
-export default function TabManada({ convs, setConvs, target, setTarget }) {
-  const [active, setActive] = useState(target || null)
-  const [draft, setDraft] = useState('')
+export default function TabManada({ convs, uid }) {
+  const [active, setActive] = useState(null)
+  const [draft, setDraft]   = useState('')
   const bottomRef = useRef(null)
   const [seenManada, setSeenManada] = useState(() => !!localStorage.getItem('seen_manada'))
-
-  useEffect(() => {
-    setActive(target)
-  }, [target])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [active, convs])
 
-  function openConv(userId) {
-    // Mark as read
-    setConvs(cs => cs.map(c => c.id === userId ? { ...c, unread: 0 } : c))
-    setActive(userId)
+  async function openConv(convId) {
+    setActive(convId)
+    const conv = convs.find(c => c.id === convId)
+    if (conv?.unread > 0 && uid) {
+      await updateDoc(doc(db, 'users', uid, 'convs', convId), { unread: 0 }).catch(() => {})
+    }
   }
 
-  function sendMsg() {
+  async function sendMsg() {
     const text = draft.trim()
-    if (!text || !active) return
+    if (!text || !active || !uid) return
     setDraft('')
+    const conv = convs.find(c => c.id === active)
+    if (!conv) return
     const msg = { id: Date.now().toString(), from: 'me', text, ts: Date.now() }
-    setConvs(cs => cs.map(c => c.id === active
-      ? { ...c, messages: [...c.messages, msg], lastMsg: text, time: 'ahora' }
-      : c
-    ))
+    const newMessages = [...(conv.messages || []), msg]
+    await updateDoc(doc(db, 'users', uid, 'convs', active), {
+      messages: newMessages,
+      lastMsg:  text,
+      time:     'ahora',
+    }).catch(() => {})
   }
 
   function handleKey(e) {
@@ -42,7 +46,7 @@ export default function TabManada({ convs, setConvs, target, setTarget }) {
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark">
       <div className="flex items-center gap-3 px-5 pt-10 pb-4 flex-shrink-0">
         <button
-          onClick={() => { setActive(null); setTarget(null) }}
+          onClick={() => setActive(null)}
           className="w-9 h-9 rounded-full bg-white dark:bg-surface-dark flex items-center justify-center shadow-sm"
         >
           <Icon name="arrow_back" className="text-gray-700 dark:text-gray-300" />
@@ -55,7 +59,7 @@ export default function TabManada({ convs, setConvs, target, setTarget }) {
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-2 space-y-3">
-        {conv.messages.map(m => (
+        {(conv.messages || []).map(m => (
           <div key={m.id} className={`flex ${m.from === 'me' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[78%] px-4 py-2.5 text-sm font-medium ${m.from === 'me' ? 'chat-u' : 'chat-b'}`}>
               {m.text}
@@ -84,7 +88,7 @@ export default function TabManada({ convs, setConvs, target, setTarget }) {
     </div>
   )
 
-  const totalUnread = convs.reduce((s, c) => s + c.unread, 0)
+  const totalUnread = convs.reduce((s, c) => s + (c.unread || 0), 0)
 
   return (
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark">

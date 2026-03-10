@@ -1,22 +1,43 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { Icon, Avatar } from './ui'
 import { MOCK_RANKING } from '../data/mockData'
 import { useApp } from '../context/AppContext'
+import { storage } from '../lib/firebase'
 
 const BREEDS = ['Quiltro (Mezcla)', 'Pastor Alemán', 'Golden Retriever', 'Labrador', 'Poodle', 'Bulldog Francés', 'Chihuahua', 'Boxer', 'Border Collie', 'Dachshund', 'Schnauzer', 'Husky Siberiano']
 
 export default function TabPerfil({ onLogout }) {
-  const { user, pets, addPet } = useApp()
+  const { user, pets, uid, addPet, updateUserPhoto, updatePetPhoto } = useApp()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const view = pathname.endsWith('/settings') ? 'settings' : pathname.endsWith('/addpet') ? 'addpet' : 'main'
-  const [newPet,   setNewPet]   = useState({ name: '', breed: 'Quiltro (Mezcla)', birthYear: new Date().getFullYear() - 3, microchip: '' })
-  const [saving,   setSaving]   = useState(false)
-  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'))
-  const [copied,   setCopied]   = useState(false)
+  const [newPet,       setNewPet]       = useState({ name: '', breed: 'Quiltro (Mezcla)', birthYear: new Date().getFullYear() - 3, microchip: '' })
+  const [saving,       setSaving]       = useState(false)
+  const [darkMode,     setDarkMode]     = useState(() => document.documentElement.classList.contains('dark'))
+  const [copied,       setCopied]       = useState(false)
+  const [uploadingUid, setUploadingUid] = useState(null) // null | 'user' | petId
+  const userPhotoRef  = useRef(null)
+  const petPhotoRefs  = useRef({})
 
   const myRankData = MOCK_RANKING.find(r => r.user === user?.name)
+
+  async function handlePhotoUpload(file, type, petId) {
+    if (!file || !uid) return
+    setUploadingUid(type === 'user' ? 'user' : petId)
+    try {
+      const path = type === 'user'
+        ? `photos/${uid}/profile`
+        : `photos/${uid}/pets/${petId}`
+      const sRef = storageRef(storage, path)
+      const snap = await uploadBytes(sRef, file)
+      const url  = await getDownloadURL(snap.ref)
+      if (type === 'user') await updateUserPhoto(url)
+      else await updatePetPhoto(petId, url)
+    } catch { /* ignore */ }
+    setUploadingUid(null)
+  }
 
   function toggleDark() {
     const d = !darkMode
@@ -148,7 +169,22 @@ export default function TabPerfil({ onLogout }) {
       <div className="px-5 mb-5">
         <div className="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
-            <Avatar src={user?.photoUrl} size={16} ring />
+            <div className="relative flex-shrink-0">
+              <Avatar src={user?.photoUrl} size={16} ring />
+              <button
+                onClick={() => userPhotoRef.current?.click()}
+                className="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center shadow border-2 border-white dark:border-surface-dark"
+              >
+                {uploadingUid === 'user'
+                  ? <span className="w-3 h-3 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
+                  : <Icon name="photo_camera" className="text-gray-900 text-sm" />}
+              </button>
+              <input
+                ref={userPhotoRef}
+                type="file" accept="image/*" className="hidden"
+                onChange={e => handlePhotoUpload(e.target.files[0], 'user')}
+              />
+            </div>
             <div>
               <p className="font-extrabold text-xl text-gray-900 dark:text-white">{user?.name}</p>
               <p className="text-sm text-text-sec font-medium">{user?.email || 'Sin email'}</p>
@@ -178,11 +214,21 @@ export default function TabPerfil({ onLogout }) {
         <div className="space-y-3">
           {pets.map(p => (
             <div key={p.id} className="bg-white dark:bg-surface-dark rounded-2xl shadow-sm overflow-hidden">
-              {/* Foto o avatar predeterminado */}
-              {p.photoUrl
-                ? <img src={p.photoUrl} className="w-full aspect-[3/1] object-cover object-top" alt="" />
-                : <div className="w-full aspect-[3/1] bg-primary/10 flex items-center justify-center"><span className="text-5xl">🐾</span></div>
-              }
+              {/* Foto o avatar predeterminado + botón cámara */}
+              <div className="relative">
+                {p.photoUrl
+                  ? <img src={p.photoUrl} className="w-full aspect-[3/1] object-cover object-top" alt="" />
+                  : <div className="w-full aspect-[3/1] bg-primary/10 flex items-center justify-center"><span className="text-5xl">🐾</span></div>
+                }
+                <button
+                  onClick={() => { petPhotoRefs.current[p.id] = petPhotoRefs.current[p.id] || document.createElement('input'); const inp = petPhotoRefs.current[p.id]; inp.type='file'; inp.accept='image/*'; inp.onchange=e=>handlePhotoUpload(e.target.files[0],'pet',p.id); inp.click() }}
+                  className="absolute bottom-2 right-2 w-8 h-8 bg-primary/90 backdrop-blur rounded-full flex items-center justify-center shadow"
+                >
+                  {uploadingUid === p.id
+                    ? <span className="w-3.5 h-3.5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
+                    : <Icon name="photo_camera" className="text-gray-900 text-base" />}
+                </button>
+              </div>
               <div className="p-4">
                 <div className="flex items-center gap-4 mb-3">
                   <div className="flex-1">

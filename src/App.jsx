@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { collection, doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore'
 import { Icon } from './components/ui'
 import Onboarding from './components/Onboarding'
 import TabPaseo from './components/TabPaseo'
@@ -9,6 +10,7 @@ import TabTienda from './components/TabTienda'
 import TabVeterinario from './components/TabVeterinario'
 import TabPerfil from './components/TabPerfil'
 import { useApp } from './context/AppContext'
+import { db } from './lib/firebase'
 import { MOCK_CONVS } from './data/mockData'
 
 const NAV_TABS = [
@@ -49,22 +51,39 @@ function Splash() {
 function AppLayout() {
   const location  = useLocation()
   const navigate  = useNavigate()
-  const { logout } = useApp()
-  const [convs, setConvs]       = useState(MOCK_CONVS)
+  const { logout, uid } = useApp()
+  const [convs, setConvs]           = useState([])
   const [sharedWalk, setSharedWalk] = useState(null)
 
-  const path        = location.pathname
-  const totalUnread = convs.reduce((s, c) => s + c.unread, 0)
+  // Cargar convs desde Firestore con onSnapshot
+  useEffect(() => {
+    if (!uid) return
+    let seeded = false
+    const unsub = onSnapshot(collection(db, 'users', uid, 'convs'), snap => {
+      if (snap.empty && !seeded) {
+        seeded = true
+        MOCK_CONVS.forEach(c => setDoc(doc(db, 'users', uid, 'convs', c.id), c))
+        return
+      }
+      setConvs(snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.time || '').localeCompare(a.time || '')))
+    }, () => { setConvs(MOCK_CONVS) })
+    return unsub
+  }, [uid])
 
-  function handleMessage(userId) {
-    const existing = convs.find(c => c.user === userId)
+  const path        = location.pathname
+  const totalUnread = convs.reduce((s, c) => s + (c.unread || 0), 0)
+
+  async function handleMessage(userId) {
+    if (!uid) return
+    const id = userId.toLowerCase().replace(/\s/g, '_')
+    const existing = convs.find(c => c.id === id)
     if (!existing) {
-      setConvs(cs => [...cs, {
-        id: userId.toLowerCase().replace(/\s/g, '_'),
-        user: userId,
+      await setDoc(doc(db, 'users', uid, 'convs', id), {
+        id, user: userId,
         photo: `https://i.pravatar.cc/80?u=${userId}`,
         lastMsg: '', time: 'ahora', unread: 0, messages: [],
-      }])
+      })
     }
     navigate('/manada')
   }
@@ -85,7 +104,7 @@ function AppLayout() {
 
         <Routes>
           <Route path="/barrio"   element={<TabBarrio onMessage={handleMessage} sharedWalk={sharedWalk} onClearShared={() => setSharedWalk(null)} />} />
-          <Route path="/manada"   element={<TabManada convs={convs} setConvs={setConvs} />} />
+          <Route path="/manada"   element={<TabManada convs={convs} uid={uid} />} />
           <Route path="/vet"      element={<TabVeterinario />} />
           <Route path="/tienda"   element={<TabTienda />} />
           <Route path="/perfil/*" element={<TabPerfil onLogout={handleLogout} />} />
