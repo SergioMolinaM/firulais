@@ -109,19 +109,19 @@ export default function TabTienda() {
           </div>
         </div>
 
-        {/* Category filters — scroll wrapper separado del flex para iOS Safari */}
-        <div className="overflow-x-auto no-scrollbar -mx-5">
-          <div className="flex gap-2 px-5 pb-1">
+        {/* Category filters */}
+        <div className="overflow-x-auto no-scrollbar pb-1">
+          <div className="flex gap-2" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
             {MOCK_MARKET.cats.map(c => (
               <button
                 key={c}
                 onClick={() => setCat(c)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all ${cat === c ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
+                className={`flex-shrink-0 px-3 py-2 rounded-full text-xs font-extrabold transition-all ${cat === c ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
               >
                 {c}
               </button>
             ))}
-            <div className="flex-shrink-0 w-5" />
+            <div className="flex-shrink-0 w-1" />
           </div>
         </div>
       </div>

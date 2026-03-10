@@ -42,7 +42,7 @@ export default function TabVeterinario() {
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
-        {sub === 'chat'    && <VetBotDisabled />}
+        {sub === 'chat'    && <VetBotDisabled onDiary={() => setSub('diary')} onGuide={() => setSub('etology')} />}
         {sub === 'diary'   && <VetDiary pet={pet} />}
         {sub === 'etology' && <EtologyGuide />}
       </div>
@@ -51,27 +51,29 @@ export default function TabVeterinario() {
 }
 
 // VetBot desactivado hasta que el servicio esté disponible
-function VetBotDisabled() {
+function VetBotDisabled({ onDiary, onGuide }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full px-8 text-center pb-16">
+    <div className="flex flex-col items-center justify-center h-full px-8 text-center pb-10">
       <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-3xl flex items-center justify-center mb-5">
         <Icon name="smart_toy" className="text-gray-400 text-4xl" />
       </div>
       <p className="font-extrabold text-lg text-gray-900 dark:text-white mb-2">ChatVet · Próximamente</p>
-      <p className="text-sm text-text-sec font-medium leading-relaxed mb-5">
-        El asistente de orientación veterinaria está en desarrollo. Mientras tanto, revisa la Guía de bienestar animal o consulta directamente con un profesional.
+      <p className="text-sm text-text-sec font-medium leading-relaxed mb-6">
+        El asistente veterinario está en desarrollo. Por ahora no responde. Usa la Guía de bienestar o consulta directamente con un profesional.
       </p>
-      <div className="w-full space-y-2">
-        {[
-          { icon: '💉', text: 'Vacunas: revisa la Guía' },
-          { icon: '🥩', text: 'Alimentación: revisa la Guía' },
-          { icon: '🚨', text: 'Emergencia: ve al veterinario de inmediato' },
-        ].map(({ icon, text }) => (
-          <div key={text} className="flex items-center gap-3 bg-white dark:bg-surface-dark rounded-xl px-4 py-3 shadow-sm text-left">
-            <span className="text-lg">{icon}</span>
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{text}</p>
-          </div>
-        ))}
+      <div className="w-full space-y-3">
+        <button
+          onClick={onDiary}
+          className="w-full bg-primary text-gray-900 font-extrabold py-3.5 rounded-2xl text-sm shadow-lg shadow-primary/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
+        >
+          <Icon name="book_2" className="text-base" /> Ir al Diario de salud
+        </button>
+        <button
+          onClick={onGuide}
+          className="w-full bg-white dark:bg-surface-dark text-gray-700 dark:text-gray-300 font-extrabold py-3.5 rounded-2xl text-sm border border-gray-200 dark:border-border-dark active:scale-95 transition-transform flex items-center justify-center gap-2"
+        >
+          <Icon name="pets" className="text-base" /> Ir a la Guía de bienestar
+        </button>
       </div>
     </div>
   )
@@ -269,18 +271,18 @@ function EtologyGuide() {
             Orientaciones generales. Los artículos completos con fuentes oficiales se publicarán próximamente.
           </p>
         </div>
-        <div className="overflow-x-auto no-scrollbar -mx-5 mb-4">
-          <div className="flex gap-2 px-5 pb-1">
+        <div className="overflow-x-auto no-scrollbar mb-4 pb-1">
+          <div className="flex gap-2" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
             {allCats.map(c => (
               <button
                 key={c}
                 onClick={() => setCat(c)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-extrabold transition-all ${cat === c ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
+                className={`flex-shrink-0 px-3 py-2 rounded-full text-xs font-extrabold transition-all ${cat === c ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
               >
                 {c}
               </button>
             ))}
-            <div className="flex-shrink-0 w-5" />
+            <div className="flex-shrink-0 w-1" />
           </div>
         </div>
       </div>

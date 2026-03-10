@@ -114,7 +114,7 @@ export default function TabPaseo({ onShareWalk }) {
 
       {/* Modal: ¿Recogiste los desechos? */}
       {showWasteCheck && (
-        <div className="absolute inset-0 z-50 bg-gray-900/70 flex items-end">
+        <div className="fixed inset-0 z-[9999] bg-gray-900/70 flex items-end">
           <div className="w-full bg-white dark:bg-surface-dark rounded-t-3xl p-6 pb-10 slide-up max-h-full overflow-y-auto">
             <div className="text-center mb-5">
               <span className="text-4xl block mb-3">🗑️</span>
@@ -143,7 +143,7 @@ export default function TabPaseo({ onShareWalk }) {
 
       {/* Modal: ¿Por qué importa? */}
       {showWasteInfo && (
-        <div className="absolute inset-0 z-50 bg-gray-900/70 flex items-end">
+        <div className="fixed inset-0 z-[9999] bg-gray-900/70 flex items-end">
           <div className="w-full bg-white dark:bg-surface-dark rounded-t-3xl p-6 pb-10 slide-up max-h-full overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <p className="font-extrabold text-base text-gray-900 dark:text-white">¿Por qué importa?</p>
@@ -174,7 +174,7 @@ export default function TabPaseo({ onShareWalk }) {
           <p className="text-base font-extrabold text-gray-900 dark:text-white mt-0.5 truncate">{pet?.name || 'tu mascota'}</p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white tabular-nums">
+          <span className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white tabular-nums">
             {fmt(seconds)}
           </span>
           <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center animate-pulse">

@@ -28,15 +28,16 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
   const [newPostText, setNewPostText]   = useState('')
   const [posting, setPosting]           = useState(false)
 
-  // Feed en tiempo real desde Firestore
+  // Feed en tiempo real desde Firestore — solo cuando auth está listo
   useEffect(() => {
+    if (!uid) return
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50))
     const unsub = onSnapshot(q, snap => {
       setFeed(snap.docs.map(d => ({
         id: d.id, ...d.data(),
         liked: (d.data().likedBy || []).includes(uid),
       })))
-    }, () => {})
+    }, (err) => { console.warn('Feed snapshot error:', err) })
     return unsub
   }, [uid])
 
@@ -165,20 +166,17 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
           </div>
         )}
 
-        {/* Tabs: scroll wrapper separado del flex para iOS Safari */}
-        <div className="overflow-x-auto no-scrollbar -mx-5">
-          <div className="flex gap-2 px-5 pb-1">
-            {SUB_TABS.map(t => (
-              <button
-                key={t.key}
-                onClick={() => setSub(t.key)}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-extrabold transition-all ${sub === t.key ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
-              >
-                <Icon name={t.icon} className="text-sm" />{t.label}
-              </button>
-            ))}
-            <div className="flex-shrink-0 w-5" />
-          </div>
+        {/* Tabs: flex-1 igual que Vet — 4 botones siempre visibles */}
+        <div className="flex gap-2">
+          {SUB_TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setSub(t.key)}
+              className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-2xl text-[11px] font-extrabold transition-all ${sub === t.key ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}
+            >
+              <Icon name={t.icon} className="text-sm" />{t.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -340,14 +338,13 @@ function AlertasView({ filter, setFilter, selected, setSelected }) {
           </p>
         </div>
       </div>
-      <div className="overflow-x-auto no-scrollbar -mx-5 mb-4">
-        <div className="flex gap-2 px-5 pb-1">
+      <div className="overflow-x-auto no-scrollbar mb-4 pb-1">
+        <div className="flex gap-2" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
           {filters.map(f => (
             <button key={f} onClick={() => setFilter(f)} className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-extrabold transition-all ${filter === f ? 'bg-primary text-gray-900' : 'bg-white dark:bg-surface-dark text-text-sec border border-gray-200 dark:border-border-dark'}`}>
               {FILTER_LABELS[f]}
             </button>
           ))}
-          <div className="flex-shrink-0 w-5" />
         </div>
       </div>
       {visible.length === 0 ? (
