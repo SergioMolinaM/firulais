@@ -62,28 +62,27 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
     const text = newPostText.trim()
     if (!text || !uid) return
     setPosting(true)
-    const now = Timestamp.fromDate(new Date())
-    const postData = {
-      authorUid: uid,
-      user:      user?.name || 'Tú',
-      avatar:    user?.photoUrl || null,
-      img:       null,
-      caption:   text,
-      category:  newPostCat,
-      loc:       'Mi barrio',
-      createdAt: now,
-      likedBy:   [],
-    }
-    // Optimistic update: show immediately without waiting for Firestore
-    const tempId = `local_${Date.now()}`
-    setFeed(prev => [{ id: tempId, ...postData, liked: false }, ...prev])
     setNewPostText('')
     setNewPostCat('momento')
     setShowCompose(false)
-    setPosting(false)
     try {
-      await addDoc(collection(db, 'posts'), postData)
-    } catch { /* offline — optimistic post already visible */ }
+      await addDoc(collection(db, 'posts'), {
+        authorUid: uid,
+        user:      user?.name || 'Tú',
+        avatar:    user?.photoUrl || null,
+        img:       null,
+        caption:   text,
+        category:  newPostCat,
+        loc:       'Mi barrio',
+        createdAt: Timestamp.fromDate(new Date()),
+        likedBy:   [],
+      })
+    } catch (err) {
+      console.error('Error publicando:', err)
+      alert('No se pudo publicar. Verifica tu conexión.')
+    } finally {
+      setPosting(false)
+    }
   }
 
   async function toggleLike(postId) {
