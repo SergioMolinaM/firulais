@@ -104,13 +104,6 @@ export default function TabBarrio({ onMessage, sharedWalk, onClearShared }) {
     { key: 'ranking', icon: 'emoji_events',  label: 'Ranking'   },
   ]
 
-  // Early return DESPUÉS de todos los hooks — auth aún no disponible
-  if (!uid) return (
-    <div className="flex items-center justify-center h-full bg-bg-light dark:bg-bg-dark">
-      <p className="text-sm text-text-sec font-medium">Cargando...</p>
-    </div>
-  )
-
   return (
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark relative">
 
