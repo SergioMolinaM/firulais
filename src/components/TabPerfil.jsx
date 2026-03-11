@@ -463,16 +463,49 @@ function PhotoCropModal({ file, onConfirm, onCancel }) {
 
   useEffect(() => () => URL.revokeObjectURL(imgUrl), [imgUrl])
 
-  // Wheel zoom — passive:false required to preventDefault
+  // Touch pinch + wheel zoom — all native listeners with passive:false
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
+
     function onWheel(e) {
       e.preventDefault()
       setScale(s => Math.min(3, Math.max(0.5, s - e.deltaY * 0.001)))
     }
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+    function onTouchStart(e) {
+      if (e.touches.length === 2) {
+        lastDistRef.current = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        )
+      }
+    }
+    function onTouchMove(e) {
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        )
+        if (lastDistRef.current) {
+          const delta = dist / lastDistRef.current
+          setScale(s => Math.min(3, Math.max(0.5, s * delta)))
+        }
+        lastDistRef.current = dist
+      }
+    }
+    function onTouchEnd(e) { if (e.touches.length < 2) lastDistRef.current = null }
+
+    el.addEventListener('wheel',      onWheel,     { passive: false })
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    el.addEventListener('touchmove',  onTouchMove,  { passive: false })
+    el.addEventListener('touchend',   onTouchEnd,   { passive: true  })
+    return () => {
+      el.removeEventListener('wheel',      onWheel)
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove',  onTouchMove)
+      el.removeEventListener('touchend',   onTouchEnd)
+    }
   }, [])
 
   function onPointerDown(e) {
@@ -486,30 +519,6 @@ function PhotoCropModal({ file, onConfirm, onCancel }) {
   }
   function onPointerUp() { setDragging(false) }
 
-  function onTouchStart(e) {
-    if (e.touches.length === 2) {
-      lastDistRef.current = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      )
-    }
-  }
-  function onTouchMove(e) {
-    if (e.touches.length === 2) {
-      e.preventDefault()
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      )
-      if (lastDistRef.current) {
-        const delta = dist / lastDistRef.current
-        setScale(s => Math.min(3, Math.max(0.5, s * delta)))
-      }
-      lastDistRef.current = dist
-    }
-  }
-  function onTouchEnd(e) { if (e.touches.length < 2) lastDistRef.current = null }
-
   return (
     <div className="fixed inset-0 z-[9999] bg-black/80 flex flex-col items-center justify-center gap-5 p-6">
       <p className="text-white font-extrabold text-base">Ajusta la foto</p>
@@ -517,9 +526,6 @@ function PhotoCropModal({ file, onConfirm, onCancel }) {
       <div
         ref={containerRef}
         className="w-56 h-56 rounded-2xl overflow-hidden relative bg-gray-800 cursor-grab active:cursor-grabbing shadow-2xl"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
       >
         <img
           src={imgUrl}
