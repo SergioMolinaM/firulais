@@ -4,7 +4,7 @@ export async function askGemini(messages) {
   try {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY
     console.log('Gemini key presente:', !!apiKey)
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
