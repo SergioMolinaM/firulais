@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { onAuthStateChanged, signInAnonymously } from 'firebase/auth'
+import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 
@@ -14,7 +14,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async firebaseUser => {
       if (!firebaseUser) {
-        try { await signInAnonymously(auth) } catch { setLoading(false) }
+        setLoading(false)
         return
       }
 
@@ -89,7 +89,7 @@ export function AppProvider({ children }) {
     setPets([])
     setUid(null)
     try { await auth.signOut() } catch { /* ignore */ }
-    // onAuthStateChanged fires null → signInAnonymously → fresh session → Onboarding
+    // onAuthStateChanged fires null → setLoading(false) → muestra Onboarding
   }
 
   return (
