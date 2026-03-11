@@ -171,7 +171,7 @@ export default function TabPaseo({ onShareWalk }) {
       <div className="px-5 pt-10 pb-3 flex items-center justify-between flex-shrink-0">
         <div className="min-w-0 flex-1 mr-3">
           <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest">Paseo activo</p>
-          <p className="text-base font-extrabold text-gray-900 dark:text-white mt-0.5 truncate">{pet?.name || 'tu mascota'}</p>
+          <p className="text-base font-extrabold text-gray-900 dark:text-white mt-0.5">{pet?.name || 'tu mascota'}</p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           <span className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white tabular-nums">

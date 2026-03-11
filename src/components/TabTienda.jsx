@@ -79,7 +79,7 @@ export default function TabTienda() {
             <span className="text-2xl flex-shrink-0">🏪</span>
             <div className="flex-1 min-w-0">
               <p className="font-extrabold text-sm text-gray-900 dark:text-white mb-1">Beneficios y servicios para ti y tus mascotas</p>
-              <p className="text-xs text-text-sec font-medium leading-relaxed">Veterinarias, alimentos, paseadores, estadías y más. Contacta directamente.</p>
+              <p className="text-xs text-text-sec font-medium leading-relaxed">Veterinarias, alimentos, paseadores, hoteles y más. Contacta directamente.</p>
             </div>
             <button onClick={() => { localStorage.setItem('seen_tienda', '1'); setSeenTienda(true) }} className="text-text-sec flex-shrink-0 mt-0.5">
               <Icon name="close" className="text-base" />
@@ -111,7 +111,7 @@ export default function TabTienda() {
 
         {/* Category filters */}
         <div className="overflow-x-auto no-scrollbar pb-1">
-          <div className="flex gap-2" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+          <div className="flex gap-2" style={{ width: 'max-content', paddingLeft: '20px', paddingRight: '20px' }}>
             {MOCK_MARKET.cats.map(c => (
               <button
                 key={c}

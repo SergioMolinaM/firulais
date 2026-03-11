@@ -424,7 +424,7 @@ function EtologyGuide() {
           </p>
         </div>
         <div className="overflow-x-auto no-scrollbar mb-4 pb-1">
-          <div className="flex gap-2" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
+          <div className="flex gap-2" style={{ width: 'max-content', paddingLeft: '20px', paddingRight: '20px' }}>
             {allCats.map(c => (
               <button
                 key={c}

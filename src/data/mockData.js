@@ -47,7 +47,7 @@ export const MOCK_VET_ENTRIES = [
 ]
 
 export const MOCK_MARKET = {
-  banner: { title: 'Consulta preventiva', subtitle: '30% dcto. para miembros Firulais', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=600', sponsor: 'Clínica VetLife' },
+  banner: { title: 'Consulta preventiva', subtitle: '30% dcto. para miembros Firulais', img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80', sponsor: 'Clínica VetLife' },
   cats: ['Todos', 'Veterinarias', 'Alimentos', 'Accesorios', 'Peluquería', 'Hoteles', 'Paseadores', 'Seguros'],
   items: [
     { id: 'm1', cat: 'Veterinarias', name: 'VetLife Clínica', desc: 'Atención 24/7 · Urgencias · Cirugía', price: 'Desde $12.000', priceTag: 'Consulta', sponsored: true, rating: 4.9, reviews: 312, img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=300', badge: 'Patrocinado', phone: '+56 2 2345 6789' },
@@ -74,4 +74,7 @@ export const ETOLOGY_TIPS = [
   { icon: '🧴', cat: 'Salud',          title: 'Desparasitación', text: 'Desparasitación interna cada 3–6 meses. Externa mensual en zonas con pulgas o garrapatas. Consultar al veterinario según zona y hábitos.' },
   { icon: '🗑️', cat: 'Desechos y convivencia', title: 'Disposición de desechos', text: 'Recoger los desechos de tu mascota en la vía pública es un deber cívico y una obligación en la mayoría de las comunas. Usa bolsas y deposítalas en papeleros o contenedores habilitados.' },
   { icon: '🏘️', cat: 'Desechos y convivencia', title: 'Convivencia en el barrio', text: 'Mantener tu perro con correa en espacios públicos y evitar que moleste a vecinos son señales de tenencia responsable. Un perro bien socializado y controlado convive mejor con todos.' },
+  { icon: '🏘️', cat: 'Convivencia responsable', title: 'Desechos en espacios públicos', text: 'Recoger los desechos de tu mascota es una obligación legal y un acto de respeto hacia el barrio. Usa bolsas biodegradables y deposítalas en contenedores. Nunca los dejes en veredas, plazas ni entradas de edificios.' },
+  { icon: '🔇', cat: 'Convivencia responsable', title: 'Ladridos y ruido', text: 'Los ladridos excesivos afectan la convivencia vecinal. El adiestramiento básico y el ejercicio diario son las mejores herramientas. Si el problema persiste, consulta con un especialista en comportamiento animal.' },
+  { icon: '🤝', cat: 'Convivencia responsable', title: 'Encuentros con vecinos sin mascotas', text: 'No todos los vecinos se sienten cómodos con mascotas. Mantén a tu mascota con correa en espacios comunes, pide permiso antes de acercarte, y respeta el espacio de quienes prefieren no interactuar.' },
 ]
