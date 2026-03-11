@@ -12,11 +12,11 @@ const QUICK_TOPICS = [
   { icon: '🚨', label: '¿Cuándo ir al vet?', prompt: '¿Cuáles son las señales de emergencia que indican que debo llevar a mi perro al veterinario de inmediato?' },
 ]
 
+const CHATVET_ENABLED = false
+
 export default function TabVeterinario() {
   const { pet } = useApp()
-  // VetBot desactivado: el endpoint /api/vetbot no está disponible aún.
-  // Tab por defecto: Diario.
-  const [sub, setSub] = useState('chat')
+  const [sub, setSub] = useState('diary')
 
   const SUB_TABS = [
     { key: 'chat',    icon: 'smart_toy', label: 'ChatVet'  },
@@ -42,7 +42,7 @@ export default function TabVeterinario() {
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
-        {sub === 'chat'    && (import.meta.env.VITE_GEMINI_API_KEY
+        {sub === 'chat'    && (CHATVET_ENABLED
           ? <VetBot pet={pet} />
           : <VetBotDisabled onDiary={() => setSub('diary')} onGuide={() => setSub('etology')} />
         )}
@@ -62,7 +62,7 @@ function VetBotDisabled({ onDiary, onGuide }) {
       </div>
       <p className="font-extrabold text-lg text-gray-900 dark:text-white mb-2">ChatVet · Próximamente</p>
       <p className="text-sm text-text-sec font-medium leading-relaxed mb-6">
-        El asistente veterinario está en desarrollo. Por ahora no responde. Usa la Guía de bienestar o consulta directamente con un profesional.
+        Pronto podrás consultar dudas básicas sobre tu mascota directamente aquí.
       </p>
       <div className="w-full space-y-3">
         <button
