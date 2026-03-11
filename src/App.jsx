@@ -40,10 +40,11 @@ export default function App() {
 function Splash() {
   return (
     <div className="flex flex-col items-center justify-center h-[100dvh] bg-bg-dark gap-4">
-      <div className="w-16 h-16 bg-primary rounded-3xl flex items-center justify-center shadow-xl shadow-primary/30 animate-pulse">
+      <div className="w-16 h-16 bg-primary rounded-3xl flex items-center justify-center shadow-xl shadow-primary/30">
         <span className="text-3xl">🐾</span>
       </div>
       <span className="text-xl font-extrabold text-white tracking-tight">Firulais</span>
+      <span className="text-sm text-gray-400 font-medium">Cuida mejor. Pasea mejor. Convive mejor.</span>
     </div>
   )
 }

@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
-import { auth, db } from '../lib/firebase'
+import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { ref, listAll, deleteObject } from 'firebase/storage'
+import { auth, db, storage } from '../lib/firebase'
 
 const AppContext = createContext(null)
 
@@ -83,6 +84,47 @@ export function AppProvider({ children }) {
     try { await updateDoc(doc(db, 'users', currentUid), { pets: newPets }) } catch { /* ignore */ }
   }
 
+  async function updateUser(fields) {
+    setUser(u => ({ ...u, ...fields }))
+    const currentUid = auth.currentUser?.uid
+    if (!currentUid) return
+    try { await updateDoc(doc(db, 'users', currentUid), fields) } catch { }
+  }
+
+  async function updatePet(petId, fields) {
+    const newPets = pets.map(p => p.id === petId ? { ...p, ...fields } : p)
+    setPets(newPets)
+    const currentUid = auth.currentUser?.uid
+    if (!currentUid) return
+    try { await updateDoc(doc(db, 'users', currentUid), { pets: newPets }) } catch { }
+  }
+
+  async function deleteAccount() {
+    const currentUid = auth.currentUser?.uid
+    if (!currentUid) return
+    try {
+      await deleteDoc(doc(db, 'users', currentUid))
+      // Borrar archivos de Storage (best-effort)
+      try {
+        const folders = [
+          ref(storage, `photos/${currentUid}`),
+          ref(storage, `photos/${currentUid}/pets`),
+        ]
+        for (const folder of folders) {
+          const { items } = await listAll(folder).catch(() => ({ items: [] }))
+          await Promise.all(items.map(item => deleteObject(item).catch(() => {})))
+        }
+      } catch { /* storage cleanup best-effort */ }
+      await auth.currentUser.delete()
+      setUser(null)
+      setPets([])
+      setUid(null)
+    } catch (err) {
+      if (err.code === 'auth/requires-recent-login') throw err
+      throw err
+    }
+  }
+
   async function logout() {
     setLoading(true)
     setUser(null)
@@ -93,7 +135,7 @@ export function AppProvider({ children }) {
   }
 
   return (
-    <AppContext.Provider value={{ user, pets, pet: pets[0] ?? null, uid, loading, handleOnboarded, addPet, addPoints, updateUserPhoto, updatePetPhoto, logout }}>
+    <AppContext.Provider value={{ user, pets, pet: pets[0] ?? null, uid, loading, handleOnboarded, addPet, addPoints, updateUserPhoto, updatePetPhoto, updateUser, updatePet, deleteAccount, logout }}>
       {children}
     </AppContext.Provider>
   )

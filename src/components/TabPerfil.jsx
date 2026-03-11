@@ -9,7 +9,7 @@ import { storage } from '../lib/firebase'
 const BREEDS = ['Quiltro (Mezcla)', 'Pastor Alemán', 'Golden Retriever', 'Labrador', 'Poodle', 'Bulldog Francés', 'Chihuahua', 'Boxer', 'Border Collie', 'Dachshund', 'Schnauzer', 'Husky Siberiano']
 
 export default function TabPerfil({ onLogout }) {
-  const { user, pets, uid, addPet, updateUserPhoto, updatePetPhoto } = useApp()
+  const { user, pets, uid, addPet, updateUserPhoto, updatePetPhoto, updateUser, updatePet, deleteAccount } = useApp()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const view = pathname.endsWith('/settings') ? 'settings' : pathname.endsWith('/addpet') ? 'addpet' : 'main'
@@ -17,11 +17,63 @@ export default function TabPerfil({ onLogout }) {
   const [saving,       setSaving]       = useState(false)
   const [darkMode,     setDarkMode]     = useState(() => document.documentElement.classList.contains('dark'))
   const [copied,       setCopied]       = useState(false)
-  const [uploadingUid, setUploadingUid] = useState(null) // null | 'user' | petId
+  const [uploadingUid, setUploadingUid] = useState(null)
   const userPhotoRef  = useRef(null)
   const petPhotoRefs  = useRef({})
+  // Edit user modal
+  const [showEditUser, setShowEditUser] = useState(false)
+  const [editUserForm, setEditUserForm] = useState({})
+  const [userSaving,   setUserSaving]   = useState(false)
+  // Edit pet modal
+  const [showEditPet, setShowEditPet] = useState(false)
+  const [editPetId,   setEditPetId]   = useState(null)
+  const [editPetForm, setEditPetForm] = useState({})
+  const [petSaving,   setPetSaving]   = useState(false)
+  // Delete account
+  const [deleteError, setDeleteError] = useState('')
+  const [deleting,    setDeleting]    = useState(false)
 
   const myRankData = MOCK_RANKING.find(r => r.user === user?.name)
+
+  function openEditUser() {
+    setEditUserForm({ name: user?.name || '', email: user?.email || '' })
+    setShowEditUser(true)
+  }
+  async function saveEditUser() {
+    if (!editUserForm.name?.trim()) return
+    setUserSaving(true)
+    await updateUser({ name: editUserForm.name.trim(), email: editUserForm.email || '' })
+    setUserSaving(false)
+    setShowEditUser(false)
+  }
+
+  function openEditPet(pet) {
+    setEditPetId(pet.id)
+    setEditPetForm({ name: pet.name, breed: pet.breed, birthYear: pet.birthYear, microchip: pet.microchip || '' })
+    setShowEditPet(true)
+  }
+  async function saveEditPet() {
+    if (!editPetForm.name?.trim() || !editPetId) return
+    setPetSaving(true)
+    await updatePet(editPetId, { name: editPetForm.name.trim(), breed: editPetForm.breed, birthYear: Number(editPetForm.birthYear), microchip: editPetForm.microchip || null })
+    setPetSaving(false)
+    setShowEditPet(false)
+  }
+
+  async function handleDeleteAccount() {
+    if (!window.confirm('¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.')) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await deleteAccount()
+    } catch (err) {
+      setDeleteError(err.code === 'auth/requires-recent-login'
+        ? 'Por seguridad, cierra sesión y vuelve a entrar antes de eliminar tu cuenta.'
+        : 'No se pudo eliminar la cuenta. Intenta de nuevo.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   async function handlePhotoUpload(file, type, petId) {
     if (!file || !uid) return
@@ -140,12 +192,18 @@ export default function TabPerfil({ onLogout }) {
             <span className="text-sm font-extrabold">Cerrar sesión</span>
           </button>
           <button
-            onClick={() => { if (window.confirm('¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.')) onLogout() }}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-red-400"
+            onClick={handleDeleteAccount}
+            disabled={deleting}
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-red-400 disabled:opacity-60"
           >
             <Icon name="delete_forever" className="text-lg text-red-400" />
-            <span className="text-sm font-semibold">Eliminar mi cuenta</span>
+            <span className="text-sm font-semibold">{deleting ? 'Eliminando...' : 'Eliminar mi cuenta'}</span>
           </button>
+          {deleteError && (
+            <div className="mx-4 mb-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl px-4 py-2.5">
+              <p className="text-xs text-red-700 dark:text-red-400 font-semibold">{deleteError}</p>
+            </div>
+          )}
         </Section>
 
         <div className="pt-4 pb-2 text-center space-y-1">
@@ -158,6 +216,81 @@ export default function TabPerfil({ onLogout }) {
   )
 
   return (
+    <>
+    {/* Modal: Editar usuario */}
+    {showEditUser && (
+      <div className="fixed inset-0 z-[9999] bg-black/50 flex items-end">
+        <div className="w-full bg-white dark:bg-surface-dark rounded-t-3xl px-6 pt-6 pb-10 slide-up">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">Editar perfil</h3>
+            <button onClick={() => setShowEditUser(false)}><Icon name="close" className="text-text-sec text-xl" /></button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block">Nombre</label>
+              <input className="input-base" value={editUserForm.name || ''} onChange={e => setEditUserForm(f => ({ ...f, name: e.target.value }))} autoFocus />
+            </div>
+            <div>
+              <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block">Email (opcional)</label>
+              <input type="email" className="input-base" value={editUserForm.email || ''} onChange={e => setEditUserForm(f => ({ ...f, email: e.target.value }))} />
+            </div>
+          </div>
+          <div className="mt-6 space-y-3">
+            <button onClick={saveEditUser} disabled={userSaving || !editUserForm.name?.trim()}
+              className="w-full bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-95 transition-transform">
+              {userSaving ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+            <button onClick={() => setShowEditUser(false)}
+              className="w-full bg-white dark:bg-surface-dark text-gray-700 dark:text-gray-300 font-extrabold py-3 rounded-2xl text-sm border border-gray-200 dark:border-border-dark active:scale-95 transition-transform">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal: Editar mascota */}
+    {showEditPet && (
+      <div className="fixed inset-0 z-[9999] bg-black/50 flex items-end">
+        <div className="w-full bg-white dark:bg-surface-dark rounded-t-3xl px-6 pt-6 pb-10 max-h-[80vh] overflow-y-auto no-scrollbar slide-up">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">Editar mascota</h3>
+            <button onClick={() => setShowEditPet(false)}><Icon name="close" className="text-text-sec text-xl" /></button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block">Nombre</label>
+              <input className="input-base" value={editPetForm.name || ''} onChange={e => setEditPetForm(f => ({ ...f, name: e.target.value }))} autoFocus />
+            </div>
+            <div>
+              <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block">Raza</label>
+              <select className="input-base" value={editPetForm.breed || ''} onChange={e => setEditPetForm(f => ({ ...f, breed: e.target.value }))}>
+                {BREEDS.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block">Año de nacimiento</label>
+              <input type="number" className="input-base" value={editPetForm.birthYear || ''} min={2010} max={2026} onChange={e => setEditPetForm(f => ({ ...f, birthYear: parseInt(e.target.value) }))} />
+            </div>
+            <div>
+              <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block">Microchip <span className="text-[10px] normal-case tracking-normal">(privado)</span></label>
+              <input className="input-base" placeholder="Número de microchip (opcional)" value={editPetForm.microchip || ''} onChange={e => setEditPetForm(f => ({ ...f, microchip: e.target.value }))} />
+            </div>
+          </div>
+          <div className="mt-6 space-y-3">
+            <button onClick={saveEditPet} disabled={petSaving || !editPetForm.name?.trim()}
+              className="w-full bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-95 transition-transform">
+              {petSaving ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+            <button onClick={() => setShowEditPet(false)}
+              className="w-full bg-white dark:bg-surface-dark text-gray-700 dark:text-gray-300 font-extrabold py-3 rounded-2xl text-sm border border-gray-200 dark:border-border-dark active:scale-95 transition-transform">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark overflow-y-auto no-scrollbar">
       <div className="px-5 pt-10 pb-4 flex items-center justify-between">
         <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Perfil</h1>
@@ -185,8 +318,13 @@ export default function TabPerfil({ onLogout }) {
                 onChange={e => handlePhotoUpload(e.target.files[0], 'user')}
               />
             </div>
-            <div>
-              <p className="font-extrabold text-xl text-gray-900 dark:text-white">{user?.name}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-extrabold text-xl text-gray-900 dark:text-white">{user?.name}</p>
+                <button onClick={openEditUser} className="flex-shrink-0 flex items-center gap-1 text-xs font-extrabold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                  <Icon name="edit" className="text-sm" /> Editar
+                </button>
+              </div>
               <p className="text-sm text-text-sec font-medium">{user?.email || 'Sin email'}</p>
               <p className="text-xs text-text-sec font-medium mt-0.5">Miembro desde {user?.joinDate ? new Date(user.joinDate).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }) : 'hoy'}</p>
               {!user?.photoUrl && (
@@ -222,8 +360,8 @@ export default function TabPerfil({ onLogout }) {
               {/* Foto o avatar predeterminado + botón cámara */}
               <div className="relative">
                 {p.photoUrl
-                  ? <img src={p.photoUrl} className="w-full aspect-[3/1] object-cover object-top" alt="" />
-                  : <div className="w-full aspect-[3/1] bg-primary/10 flex items-center justify-center"><span className="text-5xl">🐾</span></div>
+                  ? <img src={p.photoUrl} className="w-full aspect-square object-cover object-center" alt="" />
+                  : <div className="w-full aspect-square bg-primary/10 flex items-center justify-center"><span className="text-5xl">🐾</span></div>
                 }
                 <button
                   onClick={() => { petPhotoRefs.current[p.id] = petPhotoRefs.current[p.id] || document.createElement('input'); const inp = petPhotoRefs.current[p.id]; inp.type='file'; inp.accept='image/*'; inp.onchange=e=>handlePhotoUpload(e.target.files[0],'pet',p.id); inp.click() }}
@@ -235,12 +373,15 @@ export default function TabPerfil({ onLogout }) {
                 </button>
               </div>
               <div className="p-4">
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="flex-1">
+                <div className="flex items-start gap-4 mb-3">
+                  <div className="flex-1 min-w-0">
                     <p className="font-extrabold text-lg text-gray-900 dark:text-white">{p.name}</p>
                     <p className="text-sm text-text-sec font-medium">{p.breed}</p>
                     <p className="text-xs text-text-sec font-medium">{new Date().getFullYear() - p.birthYear} años · Nacido/a en {p.birthYear}</p>
                   </div>
+                  <button onClick={() => openEditPet(p)} className="flex-shrink-0 flex items-center gap-1 text-xs font-extrabold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                    <Icon name="edit" className="text-sm" /> Editar
+                  </button>
                 </div>
                 {p.microchip && (
                   <div className="flex items-center gap-2 mb-3 bg-gray-50 dark:bg-bg-dark rounded-xl px-3 py-2">
@@ -287,6 +428,7 @@ export default function TabPerfil({ onLogout }) {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
