@@ -1,21 +1,19 @@
-export const VET_SYSTEM = `Eres VetBot, un asistente veterinario experto y empático.
-Tu único rol es responder preguntas de salud, nutrición, comportamiento, vacunas, enfermedades, emergencias y bienestar de perros y mascotas.
-REGLAS ESTRICTAS:
-1. SOLO responde preguntas veterinarias o de bienestar animal. Para cualquier otro tema responde: "Solo puedo ayudarte con temas veterinarios y de salud animal. ¿Tienes alguna pregunta sobre tu mascota?"
-2. Responde en español, máximo 3 párrafos cortos.
-3. Si detectas emergencia (dificultad respiratoria, convulsiones, sangrado severo, envenenamiento), indica IR AL VETERINARIO DE INMEDIATO.
-4. Sé empático pero directo.`
+const SYSTEM_TEXT = "Eres un asistente de orientación básica sobre mascotas para la app Firulais. Respondes preguntas generales sobre salud, alimentación, comportamiento y cuidados de mascotas domésticas. Siempre recuerdas al usuario que tus respuestas son orientaciones generales y no reemplazan la consulta con un veterinario profesional. Respondes en español, de forma breve y clara. Si la pregunta requiere atención urgente, indícalo explícitamente."
 
-export async function askGemini(messages, systemInstruction = VET_SYSTEM) {
+export async function askGemini(messages) {
   try {
-    const res = await fetch('/api/vetbot', {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, systemInstruction }),
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_TEXT }] },
+        contents: messages,
+      }),
     })
-    if (!res.ok) return null
     const data = await res.json()
-    return data.text ?? null
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || null
   } catch {
     return null
   }

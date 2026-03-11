@@ -16,7 +16,7 @@ export default function TabVeterinario() {
   const { pet } = useApp()
   // VetBot desactivado: el endpoint /api/vetbot no está disponible aún.
   // Tab por defecto: Diario.
-  const [sub, setSub] = useState('diary')
+  const [sub, setSub] = useState('chat')
 
   const SUB_TABS = [
     { key: 'chat',    icon: 'smart_toy', label: 'ChatVet'  },
@@ -42,7 +42,10 @@ export default function TabVeterinario() {
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
-        {sub === 'chat'    && <VetBotDisabled onDiary={() => setSub('diary')} onGuide={() => setSub('etology')} />}
+        {sub === 'chat'    && (import.meta.env.VITE_GEMINI_API_KEY
+          ? <VetBot pet={pet} />
+          : <VetBotDisabled onDiary={() => setSub('diary')} onGuide={() => setSub('etology')} />
+        )}
         {sub === 'diary'   && <VetDiary pet={pet} />}
         {sub === 'etology' && <EtologyGuide />}
       </div>
@@ -101,9 +104,12 @@ function VetBot({ pet }) {
     setMsgs(newMsgs)
     setLoading(true)
 
-    const geminiMsgs = newMsgs.map(m => ({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text }] }))
+    // Omitir el saludo inicial (rol model, índice 0) — Gemini requiere que contents empiece con user
+    const geminiMsgs = newMsgs
+      .slice(1)
+      .map(m => ({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text }] }))
     const reply = await askGemini(geminiMsgs)
-    setMsgs(m => [...m, { role: 'model', text: reply || 'Lo siento, ocurrió un error. Intenta de nuevo.' }])
+    setMsgs(m => [...m, { role: 'model', text: reply || 'Hubo un problema al conectar. Verifica tu conexión e intenta de nuevo.' }])
     setLoading(false)
   }
 
