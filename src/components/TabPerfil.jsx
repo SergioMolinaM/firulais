@@ -454,34 +454,77 @@ export default function TabPerfil({ onLogout }) {
 
 function PhotoCropModal({ file, onConfirm, onCancel }) {
   const [pos,      setPos]      = useState({ x: 0, y: 0 })
+  const [scale,    setScale]    = useState(1)
   const [dragging, setDragging] = useState(false)
-  const startRef = useRef(null)
-  const imgUrl   = useMemo(() => URL.createObjectURL(file), [file])
+  const startRef    = useRef(null)
+  const lastDistRef = useRef(null)
+  const containerRef = useRef(null)
+  const imgUrl = useMemo(() => URL.createObjectURL(file), [file])
 
   useEffect(() => () => URL.revokeObjectURL(imgUrl), [imgUrl])
+
+  // Wheel zoom — passive:false required to preventDefault
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    function onWheel(e) {
+      e.preventDefault()
+      setScale(s => Math.min(3, Math.max(0.5, s - e.deltaY * 0.001)))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
 
   function onPointerDown(e) {
     setDragging(true)
     startRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
-
   function onPointerMove(e) {
     if (!dragging) return
     setPos({ x: e.clientX - startRef.current.x, y: e.clientY - startRef.current.y })
   }
-
   function onPointerUp() { setDragging(false) }
+
+  function onTouchStart(e) {
+    if (e.touches.length === 2) {
+      lastDistRef.current = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      )
+    }
+  }
+  function onTouchMove(e) {
+    if (e.touches.length === 2) {
+      e.preventDefault()
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      )
+      if (lastDistRef.current) {
+        const delta = dist / lastDistRef.current
+        setScale(s => Math.min(3, Math.max(0.5, s * delta)))
+      }
+      lastDistRef.current = dist
+    }
+  }
+  function onTouchEnd(e) { if (e.touches.length < 2) lastDistRef.current = null }
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/80 flex flex-col items-center justify-center gap-5 p-6">
       <p className="text-white font-extrabold text-base">Ajusta la foto</p>
-      <p className="text-gray-400 text-sm -mt-3">Arrastra para centrar</p>
-      <div className="w-64 h-64 rounded-2xl overflow-hidden relative bg-gray-800 cursor-grab active:cursor-grabbing shadow-2xl">
+      <p className="text-gray-400 text-sm -mt-3">Arrastra para centrar · Usa dos dedos para hacer zoom</p>
+      <div
+        ref={containerRef}
+        className="w-56 h-56 rounded-2xl overflow-hidden relative bg-gray-800 cursor-grab active:cursor-grabbing shadow-2xl"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         <img
           src={imgUrl}
           className="absolute w-full h-full object-cover select-none"
-          style={{ transform: `translate(${pos.x}px, ${pos.y}px)`, touchAction: 'none' }}
+          style={{ transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`, touchAction: 'none' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
