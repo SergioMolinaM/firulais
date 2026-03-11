@@ -3,7 +3,8 @@ const SYSTEM_TEXT = "Eres un asistente de orientación básica sobre mascotas pa
 export async function askGemini(messages) {
   try {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+    console.log('Gemini key presente:', !!apiKey)
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -12,6 +13,10 @@ export async function askGemini(messages) {
         contents: messages,
       }),
     })
+    if (!res.ok) {
+      console.error('Gemini error:', await res.text())
+      return null
+    }
     const data = await res.json()
     return data.candidates?.[0]?.content?.parts?.[0]?.text || null
   } catch {
