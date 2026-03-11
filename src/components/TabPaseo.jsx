@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { collection, addDoc, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore'
 import { Icon } from './ui'
 import WalkMap from './WalkMap'
@@ -9,6 +10,7 @@ const SEEN_KEY = 'seen_paseo'
 
 export default function TabPaseo({ onShareWalk }) {
   const { pet, uid, addPoints: onAddPoints } = useApp()
+  const navigate = useNavigate()
   const [walking,        setWalking]        = useState(false)
   const [seconds,        setSeconds]        = useState(0)
   const [wasteCount,     setWasteCount]     = useState(0)
@@ -333,11 +335,19 @@ export default function TabPaseo({ onShareWalk }) {
 
   return (
     <div className="flex flex-col h-full bg-bg-light dark:bg-bg-dark overflow-y-auto no-scrollbar">
-      <div className="px-6 pt-10 pb-6">
-        <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-1">Listo para salir</p>
-        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white truncate">
-          {pet?.name ? `Paseo con ${pet.name}` : 'Paseo'}
-        </h1>
+      <div className="px-6 pt-10 pb-6 flex items-start justify-between">
+        <div>
+          <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-1">Listo para salir</p>
+          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">
+            {pet?.name ? `Paseo con ${pet.name}` : 'Paseo'}
+          </h1>
+        </div>
+        <button
+          onClick={() => navigate('/perfil/settings')}
+          className="w-9 h-9 rounded-full bg-white dark:bg-surface-dark flex items-center justify-center shadow-sm mt-1 flex-shrink-0"
+        >
+          <Icon name="settings" className="text-gray-600 dark:text-gray-300 text-xl" />
+        </button>
       </div>
 
       {!seenPaseo && (

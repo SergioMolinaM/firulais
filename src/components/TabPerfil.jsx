@@ -20,6 +20,8 @@ export default function TabPerfil({ onLogout }) {
   const [uploadingUid, setUploadingUid] = useState(null)
   const userPhotoRef  = useRef(null)
   const petPhotoRefs  = useRef({})
+  // Photo preview modal
+  const [photoPreview, setPhotoPreview] = useState(null) // { file, type, petId, previewUrl }
   // Edit user modal
   const [showEditUser, setShowEditUser] = useState(false)
   const [editUserForm, setEditUserForm] = useState({})
@@ -66,17 +68,26 @@ export default function TabPerfil({ onLogout }) {
     setDeleteError('')
     try {
       await deleteAccount()
+      window.location.href = '/' // limpia estado completamente y vuelve al onboarding
     } catch (err) {
       setDeleteError(err.code === 'auth/requires-recent-login'
         ? 'Por seguridad, cierra sesión y vuelve a entrar antes de eliminar tu cuenta.'
         : 'No se pudo eliminar la cuenta. Intenta de nuevo.')
-    } finally {
       setDeleting(false)
     }
   }
 
-  async function handlePhotoUpload(file, type, petId) {
+  function handlePhotoSelect(file, type, petId) {
     if (!file || !uid) return
+    const previewUrl = URL.createObjectURL(file)
+    setPhotoPreview({ file, type, petId: petId || null, previewUrl })
+  }
+
+  async function confirmPhotoUpload() {
+    if (!photoPreview) return
+    const { file, type, petId } = photoPreview
+    URL.revokeObjectURL(photoPreview.previewUrl)
+    setPhotoPreview(null)
     setUploadingUid(type === 'user' ? 'user' : petId)
     try {
       const path = type === 'user'
@@ -89,6 +100,11 @@ export default function TabPerfil({ onLogout }) {
       else await updatePetPhoto(petId, url)
     } catch { /* ignore */ }
     setUploadingUid(null)
+  }
+
+  function cancelPhotoUpload() {
+    if (photoPreview) URL.revokeObjectURL(photoPreview.previewUrl)
+    setPhotoPreview(null)
   }
 
   function toggleDark() {
@@ -217,6 +233,30 @@ export default function TabPerfil({ onLogout }) {
 
   return (
     <>
+    {/* Modal: Preview foto antes de subir */}
+    {photoPreview && (
+      <div className="fixed inset-0 z-[9999] bg-black/70 flex flex-col items-center justify-center p-6">
+        <p className="text-white font-extrabold text-lg mb-4">Vista previa</p>
+        <div className="w-64 h-64 rounded-2xl overflow-hidden shadow-2xl mb-6">
+          <img src={photoPreview.previewUrl} className="w-full h-full object-cover object-center" alt="Preview" />
+        </div>
+        <div className="w-full max-w-xs space-y-3">
+          <button
+            onClick={confirmPhotoUpload}
+            className="w-full bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg active:scale-95 transition-transform"
+          >
+            Guardar así
+          </button>
+          <button
+            onClick={cancelPhotoUpload}
+            className="w-full bg-white/10 text-white font-extrabold py-3 rounded-2xl text-sm active:scale-95 transition-transform"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    )}
+
     {/* Modal: Editar usuario */}
     {showEditUser && (
       <div className="fixed inset-0 z-[9999] bg-black/50 flex items-end">
@@ -315,7 +355,7 @@ export default function TabPerfil({ onLogout }) {
               <input
                 ref={userPhotoRef}
                 type="file" accept="image/*" className="hidden"
-                onChange={e => handlePhotoUpload(e.target.files[0], 'user')}
+                onChange={e => handlePhotoSelect(e.target.files[0], 'user')}
               />
             </div>
             <div className="flex-1 min-w-0">
@@ -364,7 +404,7 @@ export default function TabPerfil({ onLogout }) {
                   : <div className="w-full aspect-square bg-primary/10 flex items-center justify-center"><span className="text-5xl">🐾</span></div>
                 }
                 <button
-                  onClick={() => { petPhotoRefs.current[p.id] = petPhotoRefs.current[p.id] || document.createElement('input'); const inp = petPhotoRefs.current[p.id]; inp.type='file'; inp.accept='image/*'; inp.onchange=e=>handlePhotoUpload(e.target.files[0],'pet',p.id); inp.click() }}
+                  onClick={() => { petPhotoRefs.current[p.id] = petPhotoRefs.current[p.id] || document.createElement('input'); const inp = petPhotoRefs.current[p.id]; inp.type='file'; inp.accept='image/*'; inp.onchange=e=>handlePhotoSelect(e.target.files[0],'pet',p.id); inp.click() }}
                   className="absolute bottom-2 right-2 w-8 h-8 bg-primary/90 backdrop-blur rounded-full flex items-center justify-center shadow"
                 >
                   {uploadingUid === p.id

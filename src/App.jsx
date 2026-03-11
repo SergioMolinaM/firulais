@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { collection, doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore'
 import { Icon } from './components/ui'
@@ -24,8 +24,22 @@ const NAV_TABS = [
 
 export default function App() {
   const { user, pets, loading, handleOnboarded } = useApp()
+  // Splash: mostrar siempre la primera vez en la sesión (1.5s), luego solo si loading
+  const [splashDone, setSplashDone] = useState(() => !!sessionStorage.getItem('splashShown'))
+  const [fading,     setFading]     = useState(false)
 
-  if (loading) return <Splash />
+  useEffect(() => {
+    if (splashDone) return
+    const fadeTimer = setTimeout(() => setFading(true), 1200)
+    const doneTimer = setTimeout(() => {
+      sessionStorage.setItem('splashShown', '1')
+      setSplashDone(true)
+      setFading(false)
+    }, 1500)
+    return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer) }
+  }, [])
+
+  if (loading || !splashDone) return <Splash fading={fading} />
   if (!user) return <Onboarding onDone={handleOnboarded} />
   if (user.hasPets && pets.length === 0) return <Onboarding onDone={handleOnboarded} />
 
@@ -37,14 +51,20 @@ export default function App() {
   )
 }
 
-function Splash() {
+function Splash({ fading = false }) {
   return (
-    <div className="flex flex-col items-center justify-center h-[100dvh] bg-bg-dark gap-4">
-      <div className="w-16 h-16 bg-primary rounded-3xl flex items-center justify-center shadow-xl shadow-primary/30">
-        <span className="text-3xl">🐾</span>
+    <div
+      className={`flex flex-col items-center justify-center h-[100dvh] gap-5 transition-opacity duration-300 ${fading ? 'opacity-0' : 'opacity-100'}`}
+      style={{ background: 'linear-gradient(to bottom, #0a2e1a, #0d3d22)' }}
+    >
+      <div className="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center shadow-2xl shadow-primary/40">
+        <span className="text-4xl">🐾</span>
       </div>
-      <span className="text-xl font-extrabold text-white tracking-tight">Firulais</span>
-      <span className="text-sm text-gray-400 font-medium">Cuida mejor. Pasea mejor. Convive mejor.</span>
+      <div className="text-center space-y-1.5">
+        <p className="text-3xl font-extrabold text-white tracking-tight">Firulais</p>
+        <p className="text-base font-semibold text-primary">Tu ciudad. Tu mascota.</p>
+        <p className="text-sm text-gray-400 font-medium">Cuida mejor. Pasea mejor. Convive mejor.</p>
+      </div>
     </div>
   )
 }
