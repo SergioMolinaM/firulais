@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
+import { collection, query, orderBy, onSnapshot, addDoc, Timestamp } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import { Icon } from './ui'
 import { MOCK_VET_ENTRIES, ETOLOGY_TIPS } from '../data/mockData'
 import { askGemini } from '../lib/gemini'
@@ -180,16 +182,72 @@ function VetBot({ pet }) {
   )
 }
 
-function VetDiary({ pet }) {
-  const [entries, setEntries] = useState(MOCK_VET_ENTRIES)
-  const [showAddToast, setShowAddToast] = useState(false)
+const TYPE_LABELS = { vacuna: 'Vacuna', desparasitacion: 'Desparasitación', control: 'Control general' }
+const TYPE_ICONS  = { vacuna: { icon: 'vaccines', color: 'bg-blue-100 text-blue-700' }, desparasitacion: { icon: 'medication', color: 'bg-amber-100 text-amber-700' }, control: { icon: 'monitor_heart', color: 'bg-green-100 text-green-700' } }
 
-  function handleAddEntry() {
-    setShowAddToast(true)
-    setTimeout(() => setShowAddToast(false), 3000)
+function realToCard(r) {
+  const meta = TYPE_ICONS[r.type] ?? TYPE_ICONS.control
+  if (r.type === 'vacuna')         return { id: r.id, title: r.vaccineType || 'Vacuna',         type: 'Vacuna',          date: r.date, vet: r.vet,   notes: r.notes,        nextDue: r.nextDue  || '', ...meta }
+  if (r.type === 'desparasitacion') return { id: r.id, title: r.product     || 'Desparasitación', type: 'Desparasitación',  date: r.date, vet: r.place, notes: r.notes,        nextDue: r.nextDue  || '', ...meta }
+  return                                   { id: r.id, title: 'Control general',                  type: 'Control',          date: r.date, vet: r.vet,   notes: r.observations, nextDue: r.nextVisit|| '', ...meta }
+}
+
+function VetDiary({ pet }) {
+  const { uid } = useApp()
+  const [realRecords, setRealRecords] = useState([])
+  const [showModal,   setShowModal]   = useState(false)
+  const [modalType,   setModalType]   = useState('vacuna')
+  const [modalFixed,  setModalFixed]  = useState(false)
+  const [formData,    setFormData]    = useState({})
+  const [saving,      setSaving]      = useState(false)
+
+  // Cargar registros reales del usuario desde Firestore
+  useEffect(() => {
+    if (!uid) return
+    const q = query(collection(db, 'users', uid, 'vetRecords'), orderBy('createdAt', 'desc'))
+    const unsub = onSnapshot(q, snap => {
+      setRealRecords(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    }, () => {})
+    return unsub
+  }, [uid])
+
+  function openFromExample(e) {
+    let type, data
+    if (e.type === 'Vacuna') {
+      type = 'vacuna'
+      data = { vaccineType: e.title, date: e.date, vet: e.vet, nextDue: e.nextDue || '', notes: e.notes || '' }
+    } else if (e.type === 'Desparasitación') {
+      type = 'desparasitacion'
+      data = { product: e.title, date: e.date, nextDue: e.nextDue || '', place: e.vet, notes: e.notes || '' }
+    } else {
+      type = 'control'
+      data = { date: e.date, vet: e.vet, weight: '', observations: e.notes || '', nextVisit: '' }
+    }
+    setModalType(type); setFormData(data); setModalFixed(true); setShowModal(true)
   }
 
-  const upcoming = entries.filter(e => {
+  function openNew() {
+    setModalType('vacuna'); setFormData({}); setModalFixed(false); setShowModal(true)
+  }
+
+  function field(k, v) { setFormData(f => ({ ...f, [k]: v })) }
+
+  async function saveRecord() {
+    if (!uid) return
+    setSaving(true)
+    try {
+      await addDoc(collection(db, 'users', uid, 'vetRecords'), {
+        type: modalType, petId: pet?.id || null,
+        createdAt: Timestamp.fromDate(new Date()),
+        ...formData,
+      })
+      setShowModal(false)
+    } catch (err) { console.error('Error guardando:', err) }
+    finally { setSaving(false) }
+  }
+
+  const allCards    = [...realRecords.map(realToCard), ...MOCK_VET_ENTRIES.map(e => ({ ...e, isMock: true }))]
+  const upcoming    = allCards.filter(e => {
     if (!e.nextDue) return false
     const diff = (new Date(e.nextDue) - new Date()) / (1000 * 60 * 60 * 24)
     return diff <= 30 && diff > 0
@@ -197,12 +255,70 @@ function VetDiary({ pet }) {
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-8 relative">
-      {showAddToast && (
-        <div className="sticky top-0 z-10 bg-primary/10 border border-primary/20 rounded-xl px-4 py-2.5 mb-3 flex items-center gap-2">
-          <Icon name="info" filled className="text-primary text-base flex-shrink-0" />
-          <p className="text-xs text-gray-700 dark:text-gray-300 font-semibold">Registro manual próximamente. Por ahora los datos son de ejemplo.</p>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/50 flex items-end">
+          <div className="w-full bg-white dark:bg-surface-dark rounded-t-3xl px-6 pt-6 pb-10 max-h-[85vh] overflow-y-auto no-scrollbar slide-up">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">Registrar {TYPE_LABELS[modalType]}</h3>
+              <button onClick={() => setShowModal(false)}><Icon name="close" className="text-text-sec text-xl" /></button>
+            </div>
+
+            {/* Selector de tipo — solo cuando se abre con "+ Agregar" */}
+            {!modalFixed && (
+              <div className="mb-5">
+                <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block">Tipo de registro</label>
+                <div className="flex gap-2">
+                  {Object.entries(TYPE_LABELS).map(([k, v]) => (
+                    <button key={k} onClick={() => { setModalType(k); setFormData({}) }}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all ${modalType === k ? 'bg-primary text-gray-900' : 'bg-gray-100 dark:bg-gray-800 text-text-sec'}`}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {modalType === 'vacuna' && <>
+                <MF label="Tipo de vacuna"><input className="input-base" placeholder="Ej: Antirrábica + Polivalente" value={formData.vaccineType||''} onChange={e=>field('vaccineType',e.target.value)} /></MF>
+                <MF label="Fecha de aplicación"><input type="date" className="input-base" value={formData.date||''} onChange={e=>field('date',e.target.value)} /></MF>
+                <MF label="Veterinario"><input className="input-base" placeholder="Nombre del veterinario o clínica" value={formData.vet||''} onChange={e=>field('vet',e.target.value)} /></MF>
+                <MF label="Próximo refuerzo"><input type="date" className="input-base" value={formData.nextDue||''} onChange={e=>field('nextDue',e.target.value)} /></MF>
+                <MF label="Notas (opcional)"><textarea className="input-base resize-none" rows={3} placeholder="Observaciones..." value={formData.notes||''} onChange={e=>field('notes',e.target.value)} /></MF>
+              </>}
+              {modalType === 'desparasitacion' && <>
+                <MF label="Producto"><input className="input-base" placeholder="Ej: Bravecto 20-40kg" value={formData.product||''} onChange={e=>field('product',e.target.value)} /></MF>
+                <MF label="Fecha"><input type="date" className="input-base" value={formData.date||''} onChange={e=>field('date',e.target.value)} /></MF>
+                <MF label="Próxima dosis"><input type="date" className="input-base" value={formData.nextDue||''} onChange={e=>field('nextDue',e.target.value)} /></MF>
+                <MF label="Lugar (farmacia o clínica)"><input className="input-base" placeholder="Ej: FarmaPets" value={formData.place||''} onChange={e=>field('place',e.target.value)} /></MF>
+                <MF label="Notas (opcional)"><textarea className="input-base resize-none" rows={3} placeholder="Observaciones..." value={formData.notes||''} onChange={e=>field('notes',e.target.value)} /></MF>
+              </>}
+              {modalType === 'control' && <>
+                <MF label="Fecha"><input type="date" className="input-base" value={formData.date||''} onChange={e=>field('date',e.target.value)} /></MF>
+                <MF label="Veterinario"><input className="input-base" placeholder="Nombre del veterinario o clínica" value={formData.vet||''} onChange={e=>field('vet',e.target.value)} /></MF>
+                <MF label="Peso (kg)"><input type="number" className="input-base" placeholder="Ej: 28" value={formData.weight||''} onChange={e=>field('weight',e.target.value)} /></MF>
+                <MF label="Observaciones"><textarea className="input-base resize-none" rows={3} placeholder="Notas del control..." value={formData.observations||''} onChange={e=>field('observations',e.target.value)} /></MF>
+                <MF label="Próxima visita (opcional)"><input type="date" className="input-base" value={formData.nextVisit||''} onChange={e=>field('nextVisit',e.target.value)} /></MF>
+              </>}
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button onClick={saveRecord} disabled={saving}
+                className="w-full bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-95 transition-transform">
+                {saving ? 'Guardando...' : 'Guardar registro'}
+              </button>
+              <button onClick={() => setShowModal(false)}
+                className="w-full bg-white dark:bg-surface-dark text-gray-700 dark:text-gray-300 font-extrabold py-3 rounded-2xl text-sm border border-gray-200 dark:border-border-dark active:scale-95 transition-transform">
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Próximas citas */}
       {upcoming.length > 0 && (
         <div className="mb-4">
           <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2">Próximas citas</p>
@@ -213,7 +329,7 @@ function VetDiary({ pet }) {
                 <Icon name="notifications_active" filled className="text-amber-500 text-xl flex-shrink-0" />
                 <div>
                   <p className="font-extrabold text-sm text-gray-900 dark:text-white">{e.title}</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">En {days} día{days !== 1 ? 's' : ''} · {e.nextDue}</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">En {days} día{days!==1?'s':''} · {e.nextDue}</p>
                 </div>
               </div>
             )
@@ -223,11 +339,8 @@ function VetDiary({ pet }) {
 
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-extrabold text-text-sec uppercase tracking-widest">Historial de {pet?.name || 'tu mascota'}</p>
-        <button
-          onClick={handleAddEntry}
-          title="Próximamente"
-          className="flex items-center gap-1.5 bg-white dark:bg-surface-dark border border-gray-200 dark:border-border-dark px-3 py-1.5 rounded-full text-xs font-extrabold text-text-sec shadow-sm active:scale-95 transition-transform"
-        >
+        <button onClick={openNew}
+          className="flex items-center gap-1.5 bg-white dark:bg-surface-dark border border-gray-200 dark:border-border-dark px-3 py-1.5 rounded-full text-xs font-extrabold text-text-sec shadow-sm active:scale-95 transition-transform">
           <Icon name="add" className="text-sm" /> Agregar
         </button>
       </div>
@@ -235,30 +348,63 @@ function VetDiary({ pet }) {
       <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-2.5 mb-3 flex gap-2 items-start">
         <Icon name="info" className="text-amber-500 text-sm flex-shrink-0 mt-0.5" />
         <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold leading-relaxed">
-          Datos de ejemplo. Aquí podrás registrar controles, desparasitación y otros cuidados de una o más mascotas.
+          Las cards con badge «Ejemplo» son de muestra. Tócalas para registrar tus propios datos.
         </p>
       </div>
 
       <div className="space-y-3">
-        {entries.map(e => (
-          <div key={e.id} className="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex gap-3 relative">
-            <span className="absolute top-3 right-3 text-[9px] font-extrabold uppercase tracking-wider bg-gray-100 dark:bg-gray-700 text-text-sec px-2 py-0.5 rounded-full">Demo</span>
+        {/* Registros reales del usuario — sin badge */}
+        {realRecords.map(r => {
+          const c = realToCard(r)
+          return (
+            <div key={c.id} className="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${c.color}`}>
+                <Icon name={c.icon} filled className="text-xl" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="font-extrabold text-sm text-gray-900 dark:text-white">{c.title}</p>
+                  <span className="text-xs text-text-sec font-medium">{c.date}</span>
+                </div>
+                <p className="text-xs font-semibold text-primary mb-1">{c.type}</p>
+                <p className="text-xs text-text-sec font-medium">{c.vet}</p>
+                {c.notes   && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{c.notes}</p>}
+                {c.nextDue && <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mt-1">Próximo: {c.nextDue}</p>}
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Ejemplos — con badge ámbar, clicables */}
+        {MOCK_VET_ENTRIES.map(e => (
+          <button key={e.id} onClick={() => openFromExample(e)}
+            className="w-full bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex gap-3 text-left relative active:scale-[0.98] transition-transform">
+            <span className="absolute top-3 right-3 text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Ejemplo</span>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${e.color}`}>
               <Icon name={e.icon} filled className="text-xl" />
             </div>
-            <div className="flex-1 min-w-0 pr-10">
+            <div className="flex-1 min-w-0 pr-16">
               <div className="flex items-center justify-between mb-0.5">
                 <p className="font-extrabold text-sm text-gray-900 dark:text-white">{e.title}</p>
                 <span className="text-xs text-text-sec font-medium">{e.date}</span>
               </div>
               <p className="text-xs font-semibold text-primary mb-1">{e.type}</p>
               <p className="text-xs text-text-sec font-medium">{e.vet}</p>
-              {e.notes && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{e.notes}</p>}
+              {e.notes   && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{e.notes}</p>}
               {e.nextDue && <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mt-1">Próximo: {e.nextDue}</p>}
             </div>
-          </div>
+          </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+function MF({ label, children }) {
+  return (
+    <div>
+      <label className="text-xs font-extrabold text-text-sec uppercase tracking-widest mb-2 block">{label}</label>
+      {children}
     </div>
   )
 }
