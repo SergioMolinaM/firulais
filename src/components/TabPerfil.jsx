@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { Icon, Avatar } from './ui'
@@ -79,14 +79,12 @@ export default function TabPerfil({ onLogout }) {
 
   function handlePhotoSelect(file, type, petId) {
     if (!file || !uid) return
-    const previewUrl = URL.createObjectURL(file)
-    setPhotoPreview({ file, type, petId: petId || null, previewUrl })
+    setPhotoPreview({ file, type, petId: petId || null })
   }
 
   async function confirmPhotoUpload() {
     if (!photoPreview) return
     const { file, type, petId } = photoPreview
-    URL.revokeObjectURL(photoPreview.previewUrl)
     setPhotoPreview(null)
     setUploadingUid(type === 'user' ? 'user' : petId)
     try {
@@ -102,10 +100,7 @@ export default function TabPerfil({ onLogout }) {
     setUploadingUid(null)
   }
 
-  function cancelPhotoUpload() {
-    if (photoPreview) URL.revokeObjectURL(photoPreview.previewUrl)
-    setPhotoPreview(null)
-  }
+  function cancelPhotoUpload() { setPhotoPreview(null) }
 
   function toggleDark() {
     const d = !darkMode
@@ -233,28 +228,13 @@ export default function TabPerfil({ onLogout }) {
 
   return (
     <>
-    {/* Modal: Preview foto antes de subir */}
+    {/* Modal: Recortador de foto con arrastre */}
     {photoPreview && (
-      <div className="fixed inset-0 z-[9999] bg-black/70 flex flex-col items-center justify-center p-6">
-        <p className="text-white font-extrabold text-lg mb-4">Vista previa</p>
-        <div className="w-64 h-64 rounded-2xl overflow-hidden shadow-2xl mb-6">
-          <img src={photoPreview.previewUrl} className="w-full h-full object-cover object-center" alt="Preview" />
-        </div>
-        <div className="w-full max-w-xs space-y-3">
-          <button
-            onClick={confirmPhotoUpload}
-            className="w-full bg-primary text-gray-900 font-extrabold py-4 rounded-2xl text-base shadow-lg active:scale-95 transition-transform"
-          >
-            Guardar así
-          </button>
-          <button
-            onClick={cancelPhotoUpload}
-            className="w-full bg-white/10 text-white font-extrabold py-3 rounded-2xl text-sm active:scale-95 transition-transform"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
+      <PhotoCropModal
+        file={photoPreview.file}
+        onConfirm={confirmPhotoUpload}
+        onCancel={cancelPhotoUpload}
+      />
     )}
 
     {/* Modal: Editar usuario */}
@@ -469,6 +449,51 @@ export default function TabPerfil({ onLogout }) {
       </div>
     </div>
     </>
+  )
+}
+
+function PhotoCropModal({ file, onConfirm, onCancel }) {
+  const [pos,      setPos]      = useState({ x: 0, y: 0 })
+  const [dragging, setDragging] = useState(false)
+  const startRef = useRef(null)
+  const imgUrl   = useMemo(() => URL.createObjectURL(file), [file])
+
+  useEffect(() => () => URL.revokeObjectURL(imgUrl), [imgUrl])
+
+  function onPointerDown(e) {
+    setDragging(true)
+    startRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return
+    setPos({ x: e.clientX - startRef.current.x, y: e.clientY - startRef.current.y })
+  }
+
+  function onPointerUp() { setDragging(false) }
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/80 flex flex-col items-center justify-center gap-5 p-6">
+      <p className="text-white font-extrabold text-base">Ajusta la foto</p>
+      <p className="text-gray-400 text-sm -mt-3">Arrastra para centrar</p>
+      <div className="w-64 h-64 rounded-2xl overflow-hidden relative bg-gray-800 cursor-grab active:cursor-grabbing shadow-2xl">
+        <img
+          src={imgUrl}
+          className="absolute w-full h-full object-cover select-none"
+          style={{ transform: `translate(${pos.x}px, ${pos.y}px)`, touchAction: 'none' }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          draggable={false}
+          alt=""
+        />
+      </div>
+      <div className="flex gap-3 w-full max-w-xs">
+        <button onClick={onCancel}  className="flex-1 py-3 rounded-2xl border border-gray-600 text-white font-bold active:scale-95 transition-transform">Cancelar</button>
+        <button onClick={onConfirm} className="flex-1 py-3 rounded-2xl bg-primary text-gray-900 font-extrabold active:scale-95 transition-transform">Guardar así</button>
+      </div>
+    </div>
   )
 }
 

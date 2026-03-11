@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { collection, doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore'
 import { Icon } from './components/ui'
@@ -24,22 +24,20 @@ const NAV_TABS = [
 
 export default function App() {
   const { user, pets, loading, handleOnboarded } = useApp()
-  // Splash: mostrar siempre la primera vez en la sesión (1.5s), luego solo si loading
-  const [splashDone, setSplashDone] = useState(() => !!sessionStorage.getItem('splashShown'))
-  const [fading,     setFading]     = useState(false)
+  const [splashVisible, setSplashVisible] = useState(true)
+  const [fading,        setFading]        = useState(false)
 
   useEffect(() => {
-    if (splashDone) return
     const fadeTimer = setTimeout(() => setFading(true), 1200)
-    const doneTimer = setTimeout(() => {
-      sessionStorage.setItem('splashShown', '1')
-      setSplashDone(true)
-      setFading(false)
-    }, 1500)
-    return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer) }
+    const hideTimer = setTimeout(() => setSplashVisible(false), 1500)
+    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer) }
   }, [])
 
-  if (loading || !splashDone) return <Splash fading={fading} />
+  if (splashVisible) return <Splash fading={fading} />
+
+  // Splash terminó pero Firebase aún resuelve auth
+  if (loading) return <div className="h-[100dvh]" style={{ background: '#0a2e1a' }} />
+
   if (!user) return <Onboarding onDone={handleOnboarded} />
   if (user.hasPets && pets.length === 0) return <Onboarding onDone={handleOnboarded} />
 
